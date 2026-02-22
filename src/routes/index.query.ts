@@ -9,6 +9,8 @@ export type IndexSearch = {
 	readonly tags?: GroupedTagFilters;
 };
 
+export type SerializedGroupedTagFilters = Readonly<Record<string, string>>;
+
 function parseTagValues(group: TagKindSlug, value: unknown): readonly string[] {
 	const values = new Set<string>();
 	const source = Array.isArray(value) ? value : [value];
@@ -80,4 +82,38 @@ export function parseIndexSearch(search: Record<string, unknown>): IndexSearch {
 		upload: search.upload === true || search.upload === "true" ? true : undefined,
 		tags: parseGroupedTagFilters(search),
 	};
+}
+
+export function serializeGroupedTagFilters(
+	groupedTags: GroupedTagFilters | undefined,
+): SerializedGroupedTagFilters | undefined {
+	if (!groupedTags) {
+		return undefined;
+	}
+
+	const serialized: Array<[string, string]> = [];
+
+	for (const [group, values] of Object.entries(groupedTags)) {
+		let validatedGroup: TagKindSlug;
+		try {
+			validatedGroup = assertTagKindSlug(group);
+		} catch {
+			continue;
+		}
+
+		const normalizedValues = parseTagValues(validatedGroup, values.join(","));
+		if (normalizedValues.length === 0) {
+			continue;
+		}
+
+		serialized.push([`${TAGS_PREFIX}${validatedGroup}`, normalizedValues.join(",")]);
+	}
+
+	serialized.sort(([left], [right]) => left.localeCompare(right));
+
+	if (serialized.length === 0) {
+		return undefined;
+	}
+
+	return Object.fromEntries(serialized);
 }
