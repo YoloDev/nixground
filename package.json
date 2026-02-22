@@ -11,7 +11,6 @@
 		"db:status": "geni status",
 		"db:up": "geni up",
 		"dev": "vite dev --port 3000",
-		"preview": "vite preview",
 		"test": "bun test"
 	},
 	"dependencies": {
@@ -34,6 +33,7 @@
 		"clsx": "^2.1.1",
 		"image-size": "^2.0.2",
 		"lucide-react": "^0.561.0",
+		"masonic": "^4.1.0",
 		"nitro": "npm:nitro-nightly@latest",
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0",

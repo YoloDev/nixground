@@ -2,10 +2,10 @@ list:
     just --list
 
 dev:
-    LOG_LEVEL=debug tini -s -- bun --bun run dev
+    LOG_LEVEL=debug tini -sg -p SIGKILL -- bun --bun run dev
 
 run: build
-    LOG_LEVEL=debug tini -s -- bun --bun run preview
+    LOG_LEVEL=debug tini -sg -p SIGKILL -- bun .output/server/index.mjs
 
 build:
     rm -rf .output
