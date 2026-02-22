@@ -5,15 +5,10 @@ import { useCallback } from "react";
 import { listImagesPageFn, type ListImagesItem } from "@/api/list-images";
 import { ImageGallery } from "@/components/gallery/ImageGallery";
 import { UploadDialog } from "@/components/upload/UploadDialog";
-
-type IndexSearch = {
-	readonly upload?: boolean;
-};
+import { parseIndexSearch, type IndexSearch } from "@/routes/index.query";
 
 export const Route = createFileRoute("/")({
-	validateSearch: (search): IndexSearch => ({
-		upload: search.upload === true || search.upload === "true" ? true : undefined,
-	}),
+	validateSearch: (search): IndexSearch => parseIndexSearch(search),
 	loader: async () => listImagesPageFn({ data: undefined }),
 	component: App,
 });
