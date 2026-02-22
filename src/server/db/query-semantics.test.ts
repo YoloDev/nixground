@@ -149,67 +149,58 @@ describe("db/images integration", () => {
 		expect(includingNotReady.items.map((item) => item.slug as string)).toEqual(["d", "a"]);
 	});
 
-	it("keeps cursor pagination stable when timestamps tie", async () => {
+	it("keeps newest-first ordering stable across pages with cursor progression", async () => {
 		const client = await createMigratedClient();
 
 		await using writeSession = await createSession(client, "write");
-		await insertImage(writeSession, {
-			slug: "c",
-			ext: "jpg",
-			name: "c",
-			addedAt: 10,
-			sizeBytes: 1024,
-			widthPx: 3840,
-			heightPx: 2160,
-			sha256: TEST_SHA256,
-			ready: true,
-		});
-		await insertImage(writeSession, {
-			slug: "b",
-			ext: "jpg",
-			name: "b",
-			addedAt: 10,
-			sizeBytes: 1024,
-			widthPx: 3840,
-			heightPx: 2160,
-			sha256: TEST_SHA256,
-			ready: true,
-		});
-		await insertImage(writeSession, {
-			slug: "a",
-			ext: "jpg",
-			name: "a",
-			addedAt: 10,
-			sizeBytes: 1024,
-			widthPx: 3840,
-			heightPx: 2160,
-			sha256: TEST_SHA256,
-			ready: true,
-		});
-		await insertImage(writeSession, {
-			slug: "z",
-			ext: "jpg",
-			name: "z",
-			addedAt: 9,
-			sizeBytes: 1024,
-			widthPx: 3840,
-			heightPx: 2160,
-			sha256: TEST_SHA256,
-			ready: true,
-		});
+		for (const image of [
+			{ slug: "d", addedAt: 10 },
+			{ slug: "c", addedAt: 10 },
+			{ slug: "b", addedAt: 10 },
+			{ slug: "a", addedAt: 10 },
+			{ slug: "z", addedAt: 9 },
+			{ slug: "y", addedAt: 9 },
+		]) {
+			await insertImage(writeSession, {
+				slug: image.slug,
+				ext: "jpg",
+				name: image.slug,
+				addedAt: image.addedAt,
+				sizeBytes: 1024,
+				widthPx: 3840,
+				heightPx: 2160,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+		}
 		await writeSession.commit();
 
 		await using readSession = await createSession(client, "read");
 		const firstPage = await listImagesPage(readSession, { limit: 2 });
-		expect(firstPage.items.map((item) => item.slug as string)).toEqual(["c", "b"]);
-
-		expect(firstPage.nextCursor).toBeDefined();
+		expect(firstPage.items.map((item) => item.slug as string)).toEqual(["d", "c"]);
+		expect(firstPage.nextCursor?.addedAt).toBe(10);
+		expect(firstPage.nextCursor?.slug as string | undefined).toBe("c");
 
 		const secondPage = await listImagesPage(readSession, {
 			limit: 2,
 			cursor: firstPage.nextCursor ?? undefined,
 		});
-		expect(secondPage.items.map((item) => item.slug as string)).toEqual(["a", "z"]);
+		expect(secondPage.items.map((item) => item.slug as string)).toEqual(["b", "a"]);
+		expect(secondPage.nextCursor?.addedAt).toBe(10);
+		expect(secondPage.nextCursor?.slug as string | undefined).toBe("a");
+
+		const thirdPage = await listImagesPage(readSession, {
+			limit: 2,
+			cursor: secondPage.nextCursor ?? undefined,
+		});
+		expect(thirdPage.items.map((item) => item.slug as string)).toEqual(["z", "y"]);
+		expect(thirdPage.nextCursor).toBeNull();
+
+		const allSlugs = [...firstPage.items, ...secondPage.items, ...thirdPage.items].map(
+			(item) => item.slug as string,
+		);
+		expect(allSlugs).toEqual(["d", "c", "b", "a", "z", "y"]);
+		expect(new Set(allSlugs).size).toBe(allSlugs.length);
 	});
 
 	it("returns non-ready image only when includeNotReady is true", async () => {
