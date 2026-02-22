@@ -5,11 +5,28 @@ import { useCallback } from "react";
 import { listImagesPageFn, type ListImagesItem } from "@/api/list-images";
 import { ImageGallery } from "@/components/gallery/ImageGallery";
 import { UploadDialog } from "@/components/upload/UploadDialog";
-import { parseIndexSearch, type IndexSearch } from "@/routes/index.query";
+import {
+	parseIndexSearch,
+	serializeGroupedTagFilters,
+	type IndexSearch,
+} from "@/routes/index.query";
 
 export const Route = createFileRoute("/")({
 	validateSearch: (search): IndexSearch => parseIndexSearch(search),
 	loaderDeps: ({ search }) => ({ tags: search.tags }),
+	search: {
+		middlewares: [
+			({ search, next }) => {
+				const nextSearch = next(search);
+
+				return {
+					...nextSearch,
+					tags: undefined,
+					...serializeGroupedTagFilters(search.tags),
+				};
+			},
+		],
+	},
 	loader: async ({ deps }) =>
 		listImagesPageFn({
 			data: {
