@@ -1,0 +1,13 @@
+{
+	"ignorePatterns": ["src/routeTree.gen.ts"],
+	"experimentalTailwindcss": {
+		"stylesheet": "./src/styles.css",
+		"functions": ["cn", "clsx"]
+	},
+	"experimentalSortImports": {
+		"sortSideEffects": false
+	},
+	"experimentalSortPackageJson": {
+		"sortScripts": true
+	}
+}

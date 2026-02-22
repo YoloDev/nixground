@@ -1,0 +1,11 @@
+[mcp_servers.tanstack]
+command = "bunx"
+args = ["@tanstack/cli", "mcp"]
+
+[mcp_servers.shadcn]
+command = "bunx"
+args = ["shadcn@latest", "mcp"]
+
+[mcp_servers.basic-memory]
+command = "bm"
+args = ["mcp"]

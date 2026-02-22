@@ -1,0 +1,15 @@
+{
+	"plugins": ["eslint", "typescript", "unicorn", "oxc", "react", "promise"],
+	"env": {
+		"browser": true,
+		"es2022": true
+	},
+	"ignorePatterns": ["dist/**", "node_modules/**", ".tanstack/**", "src/routeTree.gen.ts"],
+	"rules": {
+		"react/react-in-jsx-scope": "off",
+		"typescript/no-misused-promises": "error",
+		"typescript/no-unsafe-argument": "error",
+		"typescript/no-unsafe-assignment": "error",
+		"typescript/no-unsafe-type-assertion": "error"
+	}
+}

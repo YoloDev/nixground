@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS image_categories;
+DROP TABLE IF EXISTS image_tags;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS tags;
+DROP TABLE IF EXISTS images;

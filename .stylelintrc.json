@@ -1,0 +1,27 @@
+{
+	"extends": ["stylelint-config-standard", "stylelint-config-recess-order"],
+	"ignoreFiles": ["dist/**", "node_modules/**", ".tanstack/**", "src/routeTree.gen.ts"],
+	"rules": {
+		"at-rule-no-unknown": [
+			true,
+			{
+				"ignoreAtRules": [
+					"theme",
+					"source",
+					"utility",
+					"variant",
+					"custom-variant",
+					"apply",
+					"reference",
+					"config",
+					"plugin",
+					"layer"
+				]
+			}
+		],
+		"max-nesting-depth": 3,
+		"selector-max-compound-selectors": 3,
+		"declaration-no-important": true,
+		"import-notation": "string"
+	}
+}

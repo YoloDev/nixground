@@ -1,0 +1,55 @@
+PRAGMA foreign_keys = OFF;
+
+CREATE TABLE IF NOT EXISTS authors (
+    slug TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    homepage_url TEXT,
+    info_md TEXT
+);
+
+ALTER TABLE images RENAME TO images_old;
+
+CREATE TABLE images (
+    slug TEXT PRIMARY KEY,
+    ext TEXT NOT NULL,
+    name TEXT NOT NULL,
+    added_at INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    sha256 TEXT NOT NULL,
+    author_slug TEXT REFERENCES authors (slug) ON DELETE SET NULL
+);
+
+INSERT INTO images (slug, ext, name, added_at, size_bytes, sha256, author_slug)
+SELECT
+    slug,
+    ext,
+    name,
+    added_at,
+    size_bytes,
+    sha256,
+    NULL AS author_slug
+FROM images_old;
+
+DROP TABLE images_old;
+
+ALTER TABLE image_tags RENAME TO image_tags_old;
+
+CREATE TABLE image_tags (
+    image_slug TEXT NOT NULL,
+    tag_slug TEXT NOT NULL,
+    PRIMARY KEY (image_slug, tag_slug),
+    FOREIGN KEY (image_slug) REFERENCES images (slug) ON DELETE CASCADE,
+    FOREIGN KEY (tag_slug) REFERENCES tags (slug) ON DELETE CASCADE
+);
+
+INSERT INTO image_tags (image_slug, tag_slug)
+SELECT
+    image_slug,
+    tag_slug
+FROM image_tags_old;
+
+DROP TABLE image_tags_old;
+
+CREATE INDEX IF NOT EXISTS idx_images_added_at ON images (added_at);
+
+PRAGMA foreign_keys = ON;
