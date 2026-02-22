@@ -1,10 +1,14 @@
 list:
     just --list
 
-run:
-    bun --bun run dev
+dev:
+    LOG_LEVEL=debug tini -s -- bun --bun run dev
+
+run: build
+    LOG_LEVEL=debug tini -s -- bun --bun run preview
 
 build:
+    rm -rf .output
     bun --bun run build
 
 # Run geni for database migrations

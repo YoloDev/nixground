@@ -66,6 +66,10 @@ function parseOrThrow<T>(value: T | InstanceType<typeof type.errors>) {
 }
 
 export function parseUploadInput(formData: FormData): UploadInput {
+	if (!(formData instanceof FormData)) {
+		throw new Error("Expected FormData");
+	}
+
 	const sourceType = parseOrThrow(SourceType(formData.get("sourceType")));
 	const name = parseOrThrow(ImageNameInput(formData.get("name")));
 	const slug = parseOrThrow(ImageSlugInput(formData.get("slug")));
@@ -201,6 +205,13 @@ export const listAssignableTagsFn = createServerFn({ method: "GET" })
 export const uploadImageFn = createServerFn({ method: "POST" })
 	.inputValidator((input: FormData) => parseUploadInput(input))
 	.handler(async ({ data }) => {
+		logger.debug("Received upload request", {
+			event: "upload.request_received",
+			operation: "uploadImage",
+			slug: data.slug,
+			sourceType: data.source.type,
+		});
+
 		const startedAt = performance.now();
 		let stage:
 			| "fetchSource"
@@ -276,7 +287,10 @@ export const uploadImageFn = createServerFn({ method: "POST" })
 			stage = "finalize";
 			{
 				await using finalizeSession = await startSession("write");
-				await setImageTags(finalizeSession, { imageSlug: data.slug, tagSlugs: mergedTagSlugs });
+				await setImageTags(finalizeSession, {
+					imageSlug: data.slug,
+					tagSlugs: mergedTagSlugs,
+				});
 				await markImageReady(finalizeSession, data.slug);
 				await finalizeSession.commit();
 			}

@@ -56,6 +56,19 @@ function assertPageLimit(limit: number) {
 	return limit;
 }
 
+function toListImagesResponse(page: {
+	readonly items: readonly ImageRecord[];
+	readonly nextCursor: ImageCursor | null;
+}): ListImagesResponse {
+	return {
+		data: page.items.map((image) => ({
+			...image,
+			url: getPublicImageUrlForImage({ slug: image.slug, ext: image.ext }),
+		})),
+		cursor: page.nextCursor,
+	};
+}
+
 export function parseListImagesInput(input: ListImagesRequest | undefined): ListImagesInput {
 	if (typeof input === "undefined") {
 		return { limit: DEFAULT_PAGE_LIMIT };
@@ -88,16 +101,3 @@ export const listImagesPageFn = createServerFn({ method: "GET" })
 
 		return toListImagesResponse(page);
 	});
-
-export function toListImagesResponse(page: {
-	readonly items: readonly ImageRecord[];
-	readonly nextCursor: ImageCursor | null;
-}): ListImagesResponse {
-	return {
-		data: page.items.map((image) => ({
-			...image,
-			url: getPublicImageUrlForImage({ slug: image.slug, ext: image.ext }),
-		})),
-		cursor: page.nextCursor,
-	};
-}

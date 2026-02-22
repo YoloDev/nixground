@@ -42,6 +42,7 @@
                   pkgs.oxfmt
                   pkgs.sqlfluff
                   pkgs.typescript-go
+                  pkgs.tini
                   geni
                   just-mcp
                 ];

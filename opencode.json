@@ -3,12 +3,12 @@
 	"mcp": {
 		"tanstack": {
 			"type": "local",
-			"command": ["bunx", "@tanstack/cli", "mcp"],
+			"command": ["bunx", "--bun", "@tanstack/cli", "mcp"],
 			"enabled": true
 		},
 		"shadcn": {
 			"type": "local",
-			"command": ["bunx", "shadcn@latest", "mcp"],
+			"command": ["bunx", "--bun", "shadcn@latest", "mcp"],
 			"enabled": true
 		},
 		"just": {
