@@ -4,7 +4,8 @@
 
 - Use `AGENTS.md` as the source of truth for repository instructions and workflows.
 - Never disable GPG signing for commits.
-- Agents may stage files. However, agents must not run commits, pushes, or any other actions that require signing or similar user authentication. Instead, output the exact git commands and wait for the user to confirm they ran them.
+- Get permissions from the user before committing or pushing.
+- Get permissions from the user before running database migrations.
 - Prefer `just` recipes for common project workflows (tests, migrations, and recurring local tasks) when available.
 - The app is local-only (never hosted) and targets a user-run setup with Turso (metadata) and Cloudflare R2 (images); use direct SQL (no ORM).
 - Do not run `geni` commands that affect the database; provide commands for the user to run instead.

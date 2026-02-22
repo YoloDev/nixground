@@ -14,6 +14,18 @@
 - Display name: `4K`
 - Assigned automatically when the uploaded image is:
   - at least 4K resolution (`width >= 3840` and `height >= 2160`), and
-  - effectively 16:9 aspect ratio within a fixed resolver tolerance.
+  - exactly `16:9` aspect ratio using deterministic integer ratio checks.
 
-The current default aspect-ratio tolerance is `0` (exact 16:9).
+### `aspect-ratio/16-9`
+
+- Kind: `aspect-ratio`
+- Display name: `16:9`
+- Assigned automatically when `width:height` equals exactly `16:9` using deterministic integer ratio checks.
+
+### `aspect-ratio/16-10`
+
+- Kind: `aspect-ratio`
+- Display name: `16:10`
+- Assigned automatically when `width:height` equals exactly `16:10` using deterministic integer ratio checks.
+
+System-tag assignment is additive. For example, `3840x2160` receives both `resolution/4k` and `aspect-ratio/16-9`.

@@ -1,7 +1,3 @@
-const RESOLUTION_4K_SLUG = "resolution/4k";
-const TARGET_ASPECT_RATIO = 16 / 9;
-const RESOLUTION_4K_ASPECT_TOLERANCE = 0;
-
 export type ImageDimensions = {
 	readonly widthPx: number;
 	readonly heightPx: number;
@@ -20,15 +16,22 @@ function isDimensionsAtLeast4k(image: ImageForSystemTagging) {
 	return image.widthPx >= 3840 && image.heightPx >= 2160;
 }
 
-function isAspectRatioWithinTolerance(image: ImageForSystemTagging) {
-	const actualAspectRatio = image.widthPx / image.heightPx;
-	return Math.abs(actualAspectRatio - TARGET_ASPECT_RATIO) <= RESOLUTION_4K_ASPECT_TOLERANCE;
+function hasAspectRatio(image: ImageForSystemTagging, widthPart: number, heightPart: number) {
+	return image.widthPx * heightPart === image.heightPx * widthPart;
 }
 
 const systemTags: readonly SystemTagRule[] = [
 	{
-		name: RESOLUTION_4K_SLUG,
-		isApplicable: (image) => isDimensionsAtLeast4k(image) && isAspectRatioWithinTolerance(image),
+		name: "resolution/4k",
+		isApplicable: (image) => isDimensionsAtLeast4k(image) && hasAspectRatio(image, 16, 9),
+	},
+	{
+		name: "aspect-ratio/16-9",
+		isApplicable: (image) => hasAspectRatio(image, 16, 9),
+	},
+	{
+		name: "aspect-ratio/16-10",
+		isApplicable: (image) => hasAspectRatio(image, 16, 10),
 	},
 ];
 
