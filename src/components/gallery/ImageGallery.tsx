@@ -9,30 +9,56 @@ type ImageGalleryProps = {
 	readonly fetchMore: (from: ListImagesItem) => Promise<ListImagesItem[]>;
 };
 
+type GalleryLoadingState = "idle" | "loading" | "done";
+
+export function shouldRequestNextPage(stopIndex: number, itemCount: number) {
+	return stopIndex > itemCount - 4;
+}
+
+export function createLoadMoreHandler(
+	fetchMore: (from: ListImagesItem) => Promise<ListImagesItem[]>,
+	appendImages: (images: ListImagesItem[]) => void,
+	loadingState: { current: GalleryLoadingState },
+) {
+	return (_startIndex: number, stopIndex: number, currentItems: ListImagesItem[]) => {
+		if (loadingState.current !== "idle") {
+			return;
+		}
+
+		if (!shouldRequestNextPage(stopIndex, currentItems.length)) {
+			return;
+		}
+
+		const from = currentItems.at(-1);
+		if (!from) {
+			return;
+		}
+
+		loadingState.current = "loading";
+		void fetchMore(from)
+			.then((newImages) => {
+				appendImages(newImages);
+				loadingState.current = newImages.length === 0 ? "done" : "idle";
+			})
+			.catch(() => {
+				loadingState.current = "idle";
+			});
+	};
+}
+
 export function ImageGallery(props: ImageGalleryProps) {
 	const { fetchMore } = props;
 	const [images, setImages] = useState(props.images);
-	const loadingState = useRef<"idle" | "loading" | "done">("idle");
+	const loadingState = useRef<GalleryLoadingState>("idle");
 
 	const maybeLoadMore = useCallback(
-		(_startIndex: number, stopIndex: number, currentItems: ListImagesItem[]) => {
-			console.log(stopIndex);
-			if (loadingState.current != "idle") return;
-
-			if (!(stopIndex > currentItems.length - 4)) {
-				return;
-			}
-
-			loadingState.current = "loading";
-			void fetchMore(currentItems.at(-1)!)
-				.then((newImages) => {
-					setImages((prev) => [...prev, ...newImages]);
-					loadingState.current = newImages.length === 0 ? "done" : "idle";
-				})
-				.catch(() => {
-					// TODO:
-				});
-		},
+		createLoadMoreHandler(
+			fetchMore,
+			(newImages) => {
+				setImages((prev) => [...prev, ...newImages]);
+			},
+			loadingState,
+		),
 		[fetchMore],
 	);
 

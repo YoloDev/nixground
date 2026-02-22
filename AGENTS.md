@@ -11,6 +11,7 @@
 - Do not run `geni` commands that affect the database; provide commands for the user to run instead.
 - Always assume migrations have already been run unless explicitly told they are in progress; do not edit existing migrations retroactively. Create new migrations instead.
 - For all database/data-model format rules and schema conventions, use `docs/data-model.md` as the source of truth.
+- For test conventions and patterns (including Bun mock cleanup with `using`), use `docs/testing.md` as the source of truth.
 - For app-side database/data-model validation, use `arktype` with branded types following `docs/data-model.md`.
 - For `createServerFn` handlers, always use `.inputValidator(...)` and normalize boundary payloads into typed discriminated unions before handler logic.
 - Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
