@@ -12,9 +12,7 @@
 
 - Kind: `resolution`
 - Display name: `4K`
-- Assigned automatically when the uploaded image is:
-  - at least 4K resolution (`width >= 3840` and `height >= 2160`), and
-  - exactly `16:9` aspect ratio using deterministic integer ratio checks.
+- Assigned automatically when the uploaded image is at least 4K resolution (`width >= 3840` and `height >= 2160`).
 
 ### `aspect-ratio/16-9`
 

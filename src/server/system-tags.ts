@@ -23,7 +23,7 @@ function hasAspectRatio(image: ImageForSystemTagging, widthPart: number, heightP
 const systemTags: readonly SystemTagRule[] = [
 	{
 		name: "resolution/4k",
-		isApplicable: (image) => isDimensionsAtLeast4k(image) && hasAspectRatio(image, 16, 9),
+		isApplicable: (image) => isDimensionsAtLeast4k(image),
 	},
 	{
 		name: "aspect-ratio/16-9",

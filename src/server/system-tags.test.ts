@@ -25,12 +25,20 @@ describe("system tag resolution", () => {
 		expect(resolveSystemTagsForImage(image(2560, 1440))).toEqual(["aspect-ratio/16-9"]);
 	});
 
-	it("does not assign resolution/4k for non-16:9", () => {
-		expect(resolveSystemTagsForImage(image(4096, 2160))).toEqual([]);
+	it("assigns resolution/4k for non-16:9 when dimensions meet minimum", () => {
+		expect(resolveSystemTagsForImage(image(4096, 2160))).toEqual(["resolution/4k"]);
 	});
 
-	it("does not assign resolution/4k near 16:9 when dimensions are not exact", () => {
-		expect(resolveSystemTagsForImage(image(3850, 2160))).toEqual([]);
+	it("assigns resolution/4k for 16:10 when dimensions meet minimum", () => {
+		expect(resolveSystemTagsForImage(image(3840, 2400))).toEqual([
+			"resolution/4k",
+			"aspect-ratio/16-10",
+		]);
+	});
+
+	it("does not assign resolution/4k when either dimension is below minimum", () => {
+		expect(resolveSystemTagsForImage(image(3839, 2160))).toEqual([]);
+		expect(resolveSystemTagsForImage(image(3840, 2159))).toEqual([]);
 	});
 
 	it("assigns aspect-ratio/16-9 for matching ratios", () => {
