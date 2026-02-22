@@ -27,7 +27,7 @@
 - Draft issue content with clear scope and acceptance criteria before creation, then wait for user approval.
 - When priorities are not provided, do not invent or assign them; defer until the user asks.
 - When creating or updating GitHub issues, always set an issue type: use `Feature` for larger feature work, `Task` for sub-tasks/supporting implementation work, and `Bug` for defect fixes.
-- When work begins on an issue, move the linked issue/project item status to `In progress`.
+- When work begins on an issue, move the linked issue/project item status to `In progress`. Do not start implementation before this is done. This means that for a Task, both the task, and it's parent feature must be in progress.
 - When implementation is complete, prompt the user to confirm whether the issue should be closed.
 
 ## Planning workflow (GitHub Projects)
