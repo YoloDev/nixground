@@ -31,6 +31,9 @@
 			"oauth": {
 				"clientId": "{env:GITHUB_CLIENT_ID}",
 				"clientSecret": "{env:GITHUB_CLIENT_SECRET}"
+			},
+			"headers": {
+				"X-MCP-Toolsets": "context,repos,issues,users,projects,pull_requests,labels"
 			}
 		}
 	}

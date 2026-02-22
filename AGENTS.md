@@ -15,12 +15,30 @@
 
 ## Planning workflow (GitHub Issues)
 
+- The repository lives at organization YoloDev, repository nixground.
 - Use GitHub Issues as the planning source of truth; do not rely on `PLAN.md` for active planning.
 - Never create, edit, close, or reprioritize GitHub issues without explicit user approval in the current conversation.
 - Prefer concrete, shippable issues; avoid meta "track the whole project" or "create issues" issues.
 - Use sub-issues for implementation granularity (feature slices, supporting tasks, and test coverage tied to each feature).
 - Draft issue content with clear scope and acceptance criteria before creation, then wait for user approval.
 - When priorities are not provided, do not invent or assign them; defer until the user asks.
+- When creating or updating GitHub issues, always set an issue type: use `Feature` for larger feature work, `Task` for sub-tasks/supporting implementation work, and `Bug` for defect fixes.
+- When work begins on an issue, move the linked issue/project item status to `In progress`.
+- When implementation is complete, prompt the user to confirm whether the issue should be closed.
+
+## Planning workflow (GitHub Projects)
+
+- The project lives at organization YoloDev, project NixGround (project_number=1).
+- For the NixGround GitHub Project backlog view, list project items with the query `type:feature`.
+- NixGround project field IDs (use these in `github_projects_list` `fields` to avoid lookup):
+  - `Title`: `260636566`
+  - `Status`: `260636568`
+  - `Labels`: `260636569`
+  - `Repository`: `260636572`
+  - `Type`: `260636573`
+  - `Parent issue`: `260636575`
+- Common backlog query field set:
+  - `Status`, `Type` => `fields: ["260636568", "260636573"]`
 
 ## UI components (shadcn)
 
