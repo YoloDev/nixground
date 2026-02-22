@@ -5,7 +5,7 @@ import { parseListImagesInput } from "./list-images";
 describe("list-images validators", () => {
 	it("uses default limit when no input is provided", () => {
 		const parsed = parseListImagesInput(undefined);
-		expect(parsed.limit).toBe(30);
+		expect(parsed.limit).toBe(20);
 		expect(parsed.cursor).toBeUndefined();
 	});
 

@@ -16,7 +16,7 @@ export type ListImagesItem = ImageRecord & {
 };
 
 export type ListImagesResponse = {
-	readonly data: readonly ListImagesItem[];
+	readonly data: ListImagesItem[];
 	readonly cursor: ImageCursor | null;
 };
 
@@ -28,7 +28,7 @@ export type ListImagesRequest = {
 	readonly limit?: number;
 };
 
-const DEFAULT_PAGE_LIMIT = 30;
+const DEFAULT_PAGE_LIMIT = 20;
 
 const CursorInput = type({
 	addedAt: "number.integer >= 0",

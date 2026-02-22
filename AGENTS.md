@@ -41,6 +41,7 @@
 - Work on individual tasks one at a time, not the whole feature. Use sub-issue sorting for priority. Only use the feature for context. Once all tasks are complete, the feature can be closed, with approval of the user.
 - When finishing a task, suggest to the user to commit the changes with a message that includes a reference to the completed task.
 - Before closing an issue, make sure code is committed and pushed by the user.
+- Do not manually move project items to `Done`; closing the linked issue updates project status automatically.
 - Before moving on to the next task, make sure the current task is complete and the corresponding issue is closed with approval from the user.
 - NixGround project field IDs (use these in `github_projects_list` `fields` to avoid lookup):
   - `Title`: `260636566`
