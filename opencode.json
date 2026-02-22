@@ -16,11 +16,6 @@
 			"command": ["just-mcp", "--stdio"],
 			"enabled": true
 		},
-		"vibe-kanban": {
-			"type": "local",
-			"command": ["bunx", "vibe-kanban@latest", "--mcp"],
-			"enabled": true
-		},
 		"context7": {
 			"type": "remote",
 			"url": "https://mcp.context7.com/mcp",

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-## Codex guidance
+## Agent guidance
 
 - Use `AGENTS.md` as the source of truth for repository instructions and workflows.
 - Never disable GPG signing for commits.
@@ -12,6 +12,15 @@
 - For all database/data-model format rules and schema conventions, use `docs/data-model.md` as the source of truth.
 - For app-side database/data-model validation, use `arktype` with branded types following `docs/data-model.md`.
 - For `createServerFn` handlers, always use `.inputValidator(...)` and normalize boundary payloads into typed discriminated unions before handler logic.
+
+## Planning workflow (GitHub Issues)
+
+- Use GitHub Issues as the planning source of truth; do not rely on `PLAN.md` for active planning.
+- Never create, edit, close, or reprioritize GitHub issues without explicit user approval in the current conversation.
+- Prefer concrete, shippable issues; avoid meta "track the whole project" or "create issues" issues.
+- Use sub-issues for implementation granularity (feature slices, supporting tasks, and test coverage tied to each feature).
+- Draft issue content with clear scope and acceptance criteria before creation, then wait for user approval.
+- When priorities are not provided, do not invent or assign them; defer until the user asks.
 
 ## UI components (shadcn)
 
