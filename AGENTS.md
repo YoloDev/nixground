@@ -13,6 +13,8 @@
 - For app-side database/data-model validation, use `arktype` with branded types following `docs/data-model.md`.
 - For `createServerFn` handlers, always use `.inputValidator(...)` and normalize boundary payloads into typed discriminated unions before handler logic.
 - Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
+- The justfile is located at `.justfile`.
+- Always run formatting after editing code.
 
 ## Planning workflow (GitHub Issues)
 

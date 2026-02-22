@@ -7,6 +7,11 @@ export type ImageDimensions = {
 	readonly height: number;
 };
 
+type SystemTagRule = {
+	readonly name: string;
+	readonly isApplicable: (dimensions: ImageDimensions) => boolean;
+};
+
 function isDimensionsAtLeast4k(dimensions: ImageDimensions) {
 	return dimensions.width >= 3840 && dimensions.height >= 2160;
 }
@@ -16,12 +21,16 @@ function isAspectRatioWithinTolerance(dimensions: ImageDimensions) {
 	return Math.abs(actualAspectRatio - TARGET_ASPECT_RATIO) <= RESOLUTION_4K_ASPECT_TOLERANCE;
 }
 
+const systemTags: readonly SystemTagRule[] = [
+	{
+		name: RESOLUTION_4K_SLUG,
+		isApplicable: (dimensions) =>
+			isDimensionsAtLeast4k(dimensions) && isAspectRatioWithinTolerance(dimensions),
+	},
+];
+
 export function resolveSystemTagsForImage(dimensions: ImageDimensions) {
-	const tags: string[] = [];
-
-	if (isDimensionsAtLeast4k(dimensions) && isAspectRatioWithinTolerance(dimensions)) {
-		tags.push(RESOLUTION_4K_SLUG);
-	}
-
-	return tags;
+	return systemTags
+		.filter((systemTag) => systemTag.isApplicable(dimensions))
+		.map((systemTag) => systemTag.name);
 }
