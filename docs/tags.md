@@ -14,8 +14,6 @@
 - Display name: `4K`
 - Assigned automatically when the uploaded image is:
   - at least 4K resolution (`width >= 3840` and `height >= 2160`), and
-  - effectively 16:9 aspect ratio within a configurable tolerance.
+  - effectively 16:9 aspect ratio within a fixed resolver tolerance.
 
 The current default aspect-ratio tolerance is `0` (exact 16:9).
-
-You can override tolerance with `SYSTEM_TAG_RESOLUTION_4K_ASPECT_TOLERANCE`.

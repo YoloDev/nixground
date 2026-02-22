@@ -12,6 +12,7 @@
 - For all database/data-model format rules and schema conventions, use `docs/data-model.md` as the source of truth.
 - For app-side database/data-model validation, use `arktype` with branded types following `docs/data-model.md`.
 - For `createServerFn` handlers, always use `.inputValidator(...)` and normalize boundary payloads into typed discriminated unions before handler logic.
+- Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 
 ## Planning workflow (GitHub Issues)
 
@@ -30,6 +31,11 @@
 
 - The project lives at organization YoloDev, project NixGround (project_number=1).
 - For the NixGround GitHub Project backlog view, list project items with the query `type:feature`.
+- When checking what's next, start by looking at in-progress features. If there are no in-progress features, then check the backlog.
+- Work on individual tasks one at a time, not the whole feature. Use sub-issue sorting for priority. Only use the feature for context. Once all tasks are complete, the feature can be closed, with approval of the user.
+- When finishing a task, suggest to the user to commit the changes with a message that includes a reference to the completed task.
+- Before closing an issue, make sure code is committed and pushed by the user.
+- Before moving on to the next task, make sure the current task is complete and the corresponding issue is closed with approval from the user.
 - NixGround project field IDs (use these in `github_projects_list` `fields` to avoid lookup):
   - `Title`: `260636566`
   - `Status`: `260636568`
