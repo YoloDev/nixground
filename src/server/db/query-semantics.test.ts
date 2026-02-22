@@ -75,6 +75,8 @@ describe("db/images integration", () => {
 			name: "a",
 			addedAt: 3,
 			sizeBytes: 1024,
+			widthPx: 3840,
+			heightPx: 2160,
 			sha256: TEST_SHA256,
 			ready: true,
 		});
@@ -84,6 +86,8 @@ describe("db/images integration", () => {
 			name: "b",
 			addedAt: 2,
 			sizeBytes: 1024,
+			widthPx: 1920,
+			heightPx: 1080,
 			sha256: TEST_SHA256,
 			ready: true,
 		});
@@ -93,6 +97,8 @@ describe("db/images integration", () => {
 			name: "c",
 			addedAt: 1,
 			sizeBytes: 1024,
+			widthPx: 1280,
+			heightPx: 720,
 			sha256: TEST_SHA256,
 			ready: true,
 		});
@@ -102,6 +108,8 @@ describe("db/images integration", () => {
 			name: "d",
 			addedAt: 4,
 			sizeBytes: 1024,
+			widthPx: 3840,
+			heightPx: 2160,
 			sha256: TEST_SHA256,
 			ready: false,
 		});
@@ -151,6 +159,8 @@ describe("db/images integration", () => {
 			name: "c",
 			addedAt: 10,
 			sizeBytes: 1024,
+			widthPx: 3840,
+			heightPx: 2160,
 			sha256: TEST_SHA256,
 			ready: true,
 		});
@@ -160,6 +170,8 @@ describe("db/images integration", () => {
 			name: "b",
 			addedAt: 10,
 			sizeBytes: 1024,
+			widthPx: 3840,
+			heightPx: 2160,
 			sha256: TEST_SHA256,
 			ready: true,
 		});
@@ -169,6 +181,8 @@ describe("db/images integration", () => {
 			name: "a",
 			addedAt: 10,
 			sizeBytes: 1024,
+			widthPx: 3840,
+			heightPx: 2160,
 			sha256: TEST_SHA256,
 			ready: true,
 		});
@@ -178,6 +192,8 @@ describe("db/images integration", () => {
 			name: "z",
 			addedAt: 9,
 			sizeBytes: 1024,
+			widthPx: 3840,
+			heightPx: 2160,
 			sha256: TEST_SHA256,
 			ready: true,
 		});
@@ -206,6 +222,8 @@ describe("db/images integration", () => {
 			name: "pending",
 			addedAt: 1,
 			sizeBytes: 1024,
+			widthPx: 3840,
+			heightPx: 2160,
 			sha256: TEST_SHA256,
 			ready: false,
 		});
@@ -219,6 +237,8 @@ describe("db/images integration", () => {
 			includeNotReady: true,
 		});
 		expect(visible?.image.slug as string | undefined).toBe("pending");
+		expect(visible?.image.widthPx).toBe(3840);
+		expect(visible?.image.heightPx).toBe(2160);
 	});
 });
 
@@ -237,6 +257,8 @@ describe("db/image-tags integration", () => {
 			name: "img-1",
 			addedAt: 2,
 			sizeBytes: 1024,
+			widthPx: 3840,
+			heightPx: 2160,
 			sha256: TEST_SHA256,
 			ready: true,
 		});
@@ -246,6 +268,8 @@ describe("db/image-tags integration", () => {
 			name: "img-2",
 			addedAt: 1,
 			sizeBytes: 1024,
+			widthPx: 3840,
+			heightPx: 2160,
 			sha256: TEST_SHA256,
 			ready: true,
 		});

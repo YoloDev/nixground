@@ -1,6 +1,8 @@
 import {
 	assertBase64Sha256,
+	assertImageHeightPx,
 	assertImageName,
+	assertImageWidthPx,
 	assertSizeBytes,
 	assertTagKindSlug,
 	assertTagName,
@@ -34,6 +36,8 @@ export function mapImageRow(row: Row): ImageRecord {
 		name: assertImageName(asString(row.name, "name")),
 		addedAt: assertUnixSeconds(asNumber(row.added_at, "added_at")),
 		sizeBytes: assertSizeBytes(asNumber(row.size_bytes, "size_bytes")),
+		widthPx: assertImageWidthPx(asNumber(row.width_px, "width_px")),
+		heightPx: assertImageHeightPx(asNumber(row.height_px, "height_px")),
 		sha256: assertBase64Sha256(asString(row.sha256, "sha256")),
 		ready: asNumber(row.ready, "ready") === 1,
 	};

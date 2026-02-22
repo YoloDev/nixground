@@ -7,6 +7,8 @@ export type ImageRecord = {
 	name: string;
 	addedAt: number;
 	sizeBytes: number;
+	widthPx: number;
+	heightPx: number;
 	sha256: Base64Sha256;
 	ready: boolean;
 };

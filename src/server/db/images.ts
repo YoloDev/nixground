@@ -2,7 +2,9 @@ import type { InValue } from "@libsql/client";
 
 import {
 	assertBase64Sha256,
+	assertImageHeightPx,
 	assertImageName,
+	assertImageWidthPx,
 	assertSizeBytes,
 	assertTagSlug,
 	assertUnixSeconds,
@@ -27,6 +29,8 @@ type InsertImageInput = {
 	readonly name: string;
 	readonly addedAt: number;
 	readonly sizeBytes: number;
+	readonly widthPx: number;
+	readonly heightPx: number;
 	readonly sha256: string;
 	readonly ready?: boolean;
 };
@@ -92,6 +96,8 @@ SELECT
 	i.name,
 	i.added_at,
 	i.size_bytes,
+	i.width_px,
+	i.height_px,
 	i.sha256,
 	i.ready
 FROM images i
@@ -129,6 +135,8 @@ SELECT
 	i.name,
 	i.added_at,
 	i.size_bytes,
+	i.width_px,
+	i.height_px,
 	i.sha256,
 	i.ready
 FROM images i
@@ -177,15 +185,17 @@ export async function insertImage(
 	const name = assertImageName(input.name);
 	const addedAt = assertUnixSeconds(input.addedAt);
 	const sizeBytes = assertSizeBytes(input.sizeBytes);
+	const widthPx = assertImageWidthPx(input.widthPx);
+	const heightPx = assertImageHeightPx(input.heightPx);
 	const sha256 = assertBase64Sha256(input.sha256);
 	const ready = input.ready ?? false;
 
 	await session.execute({
 		sql: `
-INSERT INTO images (slug, ext, name, added_at, size_bytes, sha256, ready)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO images (slug, ext, name, added_at, size_bytes, width_px, height_px, sha256, ready)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `,
-		args: [slug, ext, name, addedAt, sizeBytes, sha256, ready ? 1 : 0],
+		args: [slug, ext, name, addedAt, sizeBytes, widthPx, heightPx, sha256, ready ? 1 : 0],
 	});
 
 	return {
@@ -194,6 +204,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
 		name,
 		addedAt,
 		sizeBytes,
+		widthPx,
+		heightPx,
 		sha256,
 		ready,
 	};

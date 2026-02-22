@@ -2,7 +2,9 @@ import { describe, expect, it } from "bun:test";
 
 import {
 	assertBase64Sha256,
+	assertImageHeightPx,
 	assertImageName,
+	assertImageWidthPx,
 	assertSizeBytes,
 	assertTagKindName,
 	assertTagKindSlug,
@@ -37,6 +39,16 @@ describe("data-model validators", () => {
 	it("requires non-negative size bytes", () => {
 		expect(assertSizeBytes(0)).toBe(0);
 		expect(() => assertSizeBytes(-1)).toThrow("non-negative integer");
+	});
+
+	it("requires positive image width in pixels", () => {
+		expect(assertImageWidthPx(3840) as number).toBe(3840);
+		expect(() => assertImageWidthPx(0)).toThrow();
+	});
+
+	it("requires positive image height in pixels", () => {
+		expect(assertImageHeightPx(2160) as number).toBe(2160);
+		expect(() => assertImageHeightPx(-1)).toThrow();
 	});
 
 	it("requires unix seconds to be integer", () => {

@@ -100,8 +100,8 @@ function probeImageDimensions(bytes: Uint8Array) {
 		}
 
 		return {
-			width: size.width,
-			height: size.height,
+			widthPx: size.width,
+			heightPx: size.height,
 		};
 	} catch {
 		return null;
@@ -143,19 +143,24 @@ export const uploadImageFn = createServerFn({ method: "POST" })
 		const ext = normalizeImageExt(bytesFromSource.ext);
 		stage = "probeDimensions";
 		const dimensions = probeImageDimensions(bytesFromSource.bytes);
-		const systemTagSlugs = dimensions ? resolveSystemTagsForImage(dimensions) : [];
 		if (!dimensions) {
-			logger.warn("Could not detect image dimensions for system tags", {
-				event: "upload.system_tags_probe_failed",
+			logger.warn("Upload rejected because image dimensions could not be detected", {
+				event: "upload.dimensions_unknown",
 				operation: "uploadImage",
 				slug: data.slug,
 				ext,
 				sourceType: data.source.type,
 			});
+			throw new Error("Could not detect image dimensions");
 		}
-		const mergedTagSlugs = [...new Set([...data.tags, ...systemTagSlugs])];
 
 		const sizeBytes = bytesFromSource.bytes.byteLength;
+		const systemTagSlugs = resolveSystemTagsForImage({
+			...dimensions,
+			sizeBytes,
+		});
+		const mergedTagSlugs = [...new Set([...data.tags, ...systemTagSlugs])];
+
 		const digest = await crypto.subtle.digest("SHA-256", bytesFromSource.bytes);
 		const sha256 = Buffer.from(digest).toString("base64");
 		const addedAt = Math.floor(Date.now() / 1000);
@@ -173,6 +178,8 @@ export const uploadImageFn = createServerFn({ method: "POST" })
 					name: data.name,
 					addedAt,
 					sizeBytes,
+					widthPx: dimensions.widthPx,
+					heightPx: dimensions.heightPx,
 					sha256,
 					ready: false,
 				});

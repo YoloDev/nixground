@@ -35,6 +35,8 @@ This is the source of truth for database/data-model format rules and schema conv
 - `name` (`TEXT`, not null): user-facing display name.
 - `added_at` (`INTEGER`, not null): Unix timestamp (seconds).
 - `size_bytes` (`INTEGER`, not null): original image size in bytes.
+- `width_px` (`INTEGER`, not null): image width in pixels.
+- `height_px` (`INTEGER`, not null): image height in pixels.
 - `sha256` (`TEXT`, not null): base64-encoded SHA-256 digest (not hex).
 - `ready` (`INTEGER`, not null): upload lifecycle flag (`0` = not finalized, `1` = uploaded and visible).
 

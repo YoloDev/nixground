@@ -11,6 +11,12 @@ export type TagSlug = typeof TagSlug.infer;
 export const Base64Sha256 = type("string#base64Sha256");
 export type Base64Sha256 = typeof Base64Sha256.infer;
 
+export const ImageWidthPx = type("number.integer > 0#imageWidthPx");
+export type ImageWidthPx = typeof ImageWidthPx.infer;
+
+export const ImageHeightPx = type("number.integer > 0#imageHeightPx");
+export type ImageHeightPx = typeof ImageHeightPx.infer;
+
 export const ImageName = type("string > 0#imageName");
 export type ImageName = typeof ImageName.infer;
 
@@ -68,6 +74,22 @@ export function assertSizeBytes(value: number) {
 		throw new Error("Image size bytes must be a non-negative integer");
 	}
 	return value;
+}
+
+export function assertImageWidthPx(value: number) {
+	const result = ImageWidthPx(value);
+	if (result instanceof type.errors) {
+		throw new Error(result.summary);
+	}
+	return result;
+}
+
+export function assertImageHeightPx(value: number) {
+	const result = ImageHeightPx(value);
+	if (result instanceof type.errors) {
+		throw new Error(result.summary);
+	}
+	return result;
 }
 
 function assertNameWith<T>(

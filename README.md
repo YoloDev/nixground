@@ -68,26 +68,6 @@ Server logging guidance, level policy, and structured logging conventions live i
 - Use structured fields (`event`, `operation`, domain fields, `error`) for stable machine-readable logs.
 - Follow severity guidance (`warn` for expected handled issues, `error` for unexpected failures).
 
-## Database session lifecycle
-
-Use `await using` for all `DbSession` lifecycles so transactions are disposed deterministically.
-
-- Read transactions: scope to a single block with `await using`.
-- Write transactions: use `await using` and call `commit()` when successful.
-- Uncommitted sessions auto-rollback during async disposal.
-
-```ts
-import { startSession } from "@/server/db";
-
-await using session = await startSession("write");
-await session.execute("INSERT INTO tags (slug, name, kind_slug, system) VALUES (?, ?, ?, 0)", [
-	"motive/nature",
-	"Nature",
-	"motive",
-]);
-await session.commit();
-```
-
 ## Nix devshell
 
 If you use Nix, you can enter the devshell from `flake.nix`:

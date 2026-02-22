@@ -48,6 +48,26 @@
 - Common backlog query field set:
   - `Status`, `Type` => `fields: ["260636568", "260636573"]`
 
+## Database session lifecycle
+
+Use `await using` for all `DbSession` lifecycles so transactions are disposed deterministically.
+
+- Read transactions: scope to a single block with `await using`.
+- Write transactions: use `await using` and call `commit()` when successful.
+- Uncommitted sessions auto-rollback during async disposal.
+
+```ts
+import { startSession } from "@/server/db";
+
+await using session = await startSession("write");
+await session.execute("INSERT INTO tags (slug, name, kind_slug, system) VALUES (?, ?, ?, 0)", [
+	"motive/nature",
+	"Nature",
+	"motive",
+]);
+await session.commit();
+```
+
 ## UI components (shadcn)
 
 - Use the latest Shadcn to install new components. Example:
