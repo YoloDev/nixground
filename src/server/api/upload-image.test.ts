@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 
-import { Url, parseEmptyInput, parseUploadInput } from "./upload-image-input";
+import { Url, parseEmptyInput, parseUploadInput } from "./upload-image";
 
-describe("upload-image-input validators", () => {
+describe("upload-image validators", () => {
 	it("parses valid URL with arktype try morph", () => {
 		const parsed = Url("https://example.com/image.jpg");
 		expect(parsed).toBeInstanceOf(URL);
@@ -22,7 +22,9 @@ describe("upload-image-input validators", () => {
 		formData.append("tags", "motive/nature");
 		formData.set(
 			"file",
-			new File([new Uint8Array([1, 2, 3])], "sunset.jpg", { type: "image/jpeg" }),
+			new File([new Uint8Array([1, 2, 3])], "sunset.jpg", {
+				type: "image/jpeg",
+			}),
 		);
 
 		const parsed = parseUploadInput(formData);

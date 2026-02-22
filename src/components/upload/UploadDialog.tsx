@@ -4,6 +4,7 @@ import { IconX } from "@tabler/icons-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
+import { listAssignableTagsFn, uploadImageFn } from "@/api/upload-image";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -25,7 +26,6 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { listAssignableTagsFn, uploadImageFn } from "@/server/upload-image";
 
 type TagOption = {
 	readonly slug: string;

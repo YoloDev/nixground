@@ -5,6 +5,7 @@
 		"jsx": "react-jsx",
 		"module": "ESNext",
 		"paths": {
+			"@/api/*": ["./src/server/api/*"],
 			"@/*": ["./src/*"]
 		},
 		"lib": ["ES2022", "DOM", "DOM.Iterable", "ESNext.Disposable"],

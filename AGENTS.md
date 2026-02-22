@@ -16,10 +16,13 @@
 - Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 - The justfile is located at `.justfile`.
 - Always run formatting after editing code.
+- Server functions live in `src/server/api` and are importable using `@/api/*`.
+- Use conventional-commit messages for git commits.
 
 ## Planning workflow (GitHub Issues)
 
 - The repository lives at organization YoloDev, repository nixground.
+- Use the github mcp for any changes to github issues/projects. If you are not able to do what you need to, ask the user for help. The github cli is not available for you.
 - Use GitHub Issues as the planning source of truth; do not rely on `PLAN.md` for active planning.
 - Never create, edit, close, or reprioritize GitHub issues without explicit user approval in the current conversation.
 - Prefer concrete, shippable issues; avoid meta "track the whole project" or "create issues" issues.
