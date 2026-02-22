@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type } from "arktype";
 
-import { assertUnixSeconds } from "@/lib/data-model";
+import { assertTagKindSlug, assertTagSlug, assertUnixSeconds } from "@/lib/data-model";
 import { assertValidImageSlug } from "@/lib/image-keys";
 import { listImagesPage, startSession, type ImageCursor, type ImageRecord } from "@/server/db";
 import { getPublicImageUrlForImage } from "@/server/r2";
@@ -9,6 +9,7 @@ import { getPublicImageUrlForImage } from "@/server/r2";
 export type ListImagesInput = {
 	readonly cursor?: ImageCursor;
 	readonly limit: number;
+	readonly groupedTagSlugs?: Readonly<Record<string, readonly string[]>>;
 };
 
 export type ListImagesItem = ImageRecord & {
@@ -26,6 +27,7 @@ export type ListImagesRequest = {
 		readonly slug: string;
 	};
 	readonly limit?: number;
+	readonly groupedTagSlugs?: Record<string, readonly string[]>;
 };
 
 const DEFAULT_PAGE_LIMIT = 20;
@@ -54,6 +56,36 @@ function assertPageLimit(limit: number) {
 	}
 
 	return limit;
+}
+
+function assertGroupedTagSlugs(
+	groupedTagSlugs: Record<string, readonly string[]> | undefined,
+): Readonly<Record<string, readonly string[]>> | undefined {
+	if (!groupedTagSlugs) {
+		return undefined;
+	}
+
+	const entries: Array<[string, readonly string[]]> = [];
+	for (const [rawGroup, rawValues] of Object.entries(groupedTagSlugs)) {
+		const group = assertTagKindSlug(rawGroup);
+		const values = rawValues.map((value) => {
+			const slug = assertTagSlug(`${group}/${value}`);
+			const [, tagValue] = slug.split("/");
+			if (!tagValue) {
+				throw new Error("Tag value is required");
+			}
+
+			return tagValue;
+		});
+
+		entries.push([group, values]);
+	}
+
+	if (entries.length === 0) {
+		return undefined;
+	}
+
+	return Object.fromEntries(entries);
 }
 
 function toListImagesResponse(page: {
@@ -87,6 +119,7 @@ export function parseListImagesInput(input: ListImagesRequest | undefined): List
 	return {
 		limit,
 		cursor,
+		groupedTagSlugs: assertGroupedTagSlugs(input.groupedTagSlugs),
 	};
 }
 
@@ -97,6 +130,7 @@ export const listImagesPageFn = createServerFn({ method: "GET" })
 		const page = await listImagesPage(session, {
 			cursor: data.cursor,
 			limit: data.limit,
+			groupedTagSlugs: data.groupedTagSlugs,
 		});
 
 		return toListImagesResponse(page);

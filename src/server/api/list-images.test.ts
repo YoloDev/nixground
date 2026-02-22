@@ -38,4 +38,28 @@ describe("list-images validators", () => {
 			}),
 		).toThrow();
 	});
+
+	it("parses grouped tag filters", () => {
+		const parsed = parseListImagesInput({
+			groupedTagSlugs: {
+				resolution: ["4k"],
+				"aspect-ratio": ["16-9", "16-10"],
+			},
+		});
+
+		expect(parsed.groupedTagSlugs).toEqual({
+			resolution: ["4k"],
+			"aspect-ratio": ["16-9", "16-10"],
+		});
+	});
+
+	it("rejects invalid grouped tag values", () => {
+		expect(() =>
+			parseListImagesInput({
+				groupedTagSlugs: {
+					resolution: ["bad value"],
+				},
+			}),
+		).toThrow();
+	});
 });

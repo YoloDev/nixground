@@ -9,7 +9,13 @@ import { parseIndexSearch, type IndexSearch } from "@/routes/index.query";
 
 export const Route = createFileRoute("/")({
 	validateSearch: (search): IndexSearch => parseIndexSearch(search),
-	loader: async () => listImagesPageFn({ data: undefined }),
+	loaderDeps: ({ search }) => ({ tags: search.tags }),
+	loader: async ({ deps }) =>
+		listImagesPageFn({
+			data: {
+				groupedTagSlugs: deps.tags,
+			},
+		}),
 	component: App,
 });
 
@@ -26,12 +32,13 @@ function App() {
 						slug: prev.slug,
 						addedAt: prev.addedAt,
 					},
+					groupedTagSlugs: search.tags,
 				},
 			});
 
 			return response.data;
 		},
-		[loadMoreFn],
+		[loadMoreFn, search.tags],
 	);
 
 	return (

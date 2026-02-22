@@ -4,9 +4,11 @@ import {
 	assertBase64Sha256,
 	assertImageHeightPx,
 	assertImageName,
+	assertTagKindSlug,
 	assertImageWidthPx,
 	assertSizeBytes,
 	assertTagSlug,
+	type TagKindSlug,
 	assertUnixSeconds,
 } from "@/lib/data-model";
 import { assertValidImageSlug, normalizeImageExt } from "@/lib/image-keys";
@@ -19,7 +21,7 @@ import { mapImageRow, mapTagRow } from "./rows";
 type ListImagesPageInput = {
 	readonly cursor?: ImageCursor;
 	readonly limit: number;
-	readonly tagSlugs?: readonly string[];
+	readonly groupedTagSlugs?: Readonly<Record<string, readonly string[]>>;
 	readonly includeNotReady?: boolean;
 };
 
@@ -46,31 +48,66 @@ function assertPageLimit(limit: number) {
 	return limit;
 }
 
-function buildTagsFilter(tagSlugs: readonly string[]) {
-	if (tagSlugs.length === 0) {
+type GroupedTagFilter = {
+	readonly group: TagKindSlug;
+	readonly slugs: readonly string[];
+};
+
+function parseGroupedTagSlugs(
+	groupedTagSlugs: Readonly<Record<string, readonly string[]>>,
+): readonly GroupedTagFilter[] {
+	const grouped: GroupedTagFilter[] = [];
+
+	for (const [rawGroup, rawValues] of Object.entries(groupedTagSlugs)) {
+		const group = assertTagKindSlug(rawGroup);
+		const slugs = rawValues.map((value) => assertTagSlug(`${group}/${value}`));
+
+		if (slugs.length === 0) {
+			continue;
+		}
+
+		grouped.push({
+			group,
+			slugs,
+		});
+	}
+
+	return grouped;
+}
+
+function buildTagsFilter(groupedTagSlugs: readonly GroupedTagFilter[]) {
+	if (groupedTagSlugs.length === 0) {
 		return { sql: "", args: [] as InValue[] };
 	}
 
-	const validatedTagSlugs = tagSlugs.map(assertTagSlug);
-	const placeholders = validatedTagSlugs.map(() => "?").join(", ");
+	const sqlFragments: string[] = [];
+	const args: InValue[] = [];
 
-	return {
-		sql: `
+	for (const [index, groupedTag] of groupedTagSlugs.entries()) {
+		const placeholders = groupedTag.slugs.map(() => "?").join(", ");
+		sqlFragments.push(`
 JOIN (
 	SELECT it.image_slug
 	FROM image_tags it
-	WHERE it.tag_slug IN (${placeholders})
+	INNER JOIN tags t ON t.slug = it.tag_slug
+	WHERE t.kind_slug = ?
+	AND it.tag_slug IN (${placeholders})
 	GROUP BY it.image_slug
-	HAVING COUNT(DISTINCT it.tag_slug) = ?
-) matched ON matched.image_slug = i.slug
-`,
-		args: [...validatedTagSlugs, validatedTagSlugs.length] as InValue[],
+) matched_${index} ON matched_${index}.image_slug = i.slug
+`);
+		args.push(groupedTag.group, ...groupedTag.slugs);
+	}
+
+	return {
+		sql: sqlFragments.join("\n"),
+		args,
 	};
 }
 
 export async function listImagesPage(session: DbExecutor, input: ListImagesPageInput) {
 	const limit = assertPageLimit(input.limit);
-	const tagsFilter = buildTagsFilter(input.tagSlugs ?? []);
+	const groupedTags = input.groupedTagSlugs ? parseGroupedTagSlugs(input.groupedTagSlugs) : [];
+	const tagsFilter = buildTagsFilter(groupedTags);
 
 	const whereClauses: string[] = [];
 	const args: InValue[] = [...tagsFilter.args];

@@ -9,6 +9,7 @@ import { setImageTags } from "./image-tags";
 import { getImageBySlug, insertImage, listImagesPage } from "./images";
 
 const TEST_SHA256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=";
+const INTEGRATION_TIMEOUT_MS = 15_000;
 
 const migrationFiles = readdirSync(join(process.cwd(), "migrations"))
 	.filter((file) => /^\d+_.*\.up\.sql$/.test(file))
@@ -62,228 +63,301 @@ async function ensureTag(client: Client, tagSlug: string, name: string) {
 }
 
 describe("db/images integration", () => {
-	it("applies AND semantics across selected tags and defaults to ready images", async () => {
-		const client = await createMigratedClient();
+	it(
+		"applies AND semantics across selected tags and defaults to ready images",
+		async () => {
+			const client = await createMigratedClient();
 
-		await ensureTag(client, "resolution/4k", "4K");
-		await ensureTag(client, "motive/nature", "Nature");
+			await ensureTag(client, "resolution/4k", "4K");
+			await ensureTag(client, "motive/nature", "Nature");
 
-		await using session = await createSession(client, "write");
-		await insertImage(session, {
-			slug: "a",
-			ext: "jpg",
-			name: "a",
-			addedAt: 3,
-			sizeBytes: 1024,
-			widthPx: 3840,
-			heightPx: 2160,
-			sha256: TEST_SHA256,
-			ready: true,
-		});
-		await insertImage(session, {
-			slug: "b",
-			ext: "jpg",
-			name: "b",
-			addedAt: 2,
-			sizeBytes: 1024,
-			widthPx: 1920,
-			heightPx: 1080,
-			sha256: TEST_SHA256,
-			ready: true,
-		});
-		await insertImage(session, {
-			slug: "c",
-			ext: "jpg",
-			name: "c",
-			addedAt: 1,
-			sizeBytes: 1024,
-			widthPx: 1280,
-			heightPx: 720,
-			sha256: TEST_SHA256,
-			ready: true,
-		});
-		await insertImage(session, {
-			slug: "d",
-			ext: "jpg",
-			name: "d",
-			addedAt: 4,
-			sizeBytes: 1024,
-			widthPx: 3840,
-			heightPx: 2160,
-			sha256: TEST_SHA256,
-			ready: false,
-		});
-
-		await setImageTags(session, {
-			imageSlug: "a",
-			tagSlugs: ["resolution/4k", "motive/nature"],
-		});
-		await setImageTags(session, {
-			imageSlug: "b",
-			tagSlugs: ["resolution/4k"],
-		});
-		await setImageTags(session, {
-			imageSlug: "c",
-			tagSlugs: ["motive/nature"],
-		});
-		await setImageTags(session, {
-			imageSlug: "d",
-			tagSlugs: ["resolution/4k", "motive/nature"],
-		});
-		await session.commit();
-
-		await using readSession = await createSession(client, "read");
-		const readyOnly = await listImagesPage(readSession, {
-			limit: 10,
-			tagSlugs: ["resolution/4k", "motive/nature"],
-		});
-
-		expect(readyOnly.items.map((item) => item.slug as string)).toEqual(["a"]);
-
-		const includingNotReady = await listImagesPage(readSession, {
-			limit: 10,
-			tagSlugs: ["resolution/4k", "motive/nature"],
-			includeNotReady: true,
-		});
-
-		expect(includingNotReady.items.map((item) => item.slug as string)).toEqual(["d", "a"]);
-	});
-
-	it("keeps newest-first ordering stable across pages with cursor progression", async () => {
-		const client = await createMigratedClient();
-
-		await using writeSession = await createSession(client, "write");
-		for (const image of [
-			{ slug: "d", addedAt: 10 },
-			{ slug: "c", addedAt: 10 },
-			{ slug: "b", addedAt: 10 },
-			{ slug: "a", addedAt: 10 },
-			{ slug: "z", addedAt: 9 },
-			{ slug: "y", addedAt: 9 },
-		]) {
-			await insertImage(writeSession, {
-				slug: image.slug,
+			await using session = await createSession(client, "write");
+			await insertImage(session, {
+				slug: "a",
 				ext: "jpg",
-				name: image.slug,
-				addedAt: image.addedAt,
+				name: "a",
+				addedAt: 3,
 				sizeBytes: 1024,
 				widthPx: 3840,
 				heightPx: 2160,
 				sha256: TEST_SHA256,
 				ready: true,
 			});
-		}
-		await writeSession.commit();
+			await insertImage(session, {
+				slug: "b",
+				ext: "jpg",
+				name: "b",
+				addedAt: 2,
+				sizeBytes: 1024,
+				widthPx: 1920,
+				heightPx: 1080,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+			await insertImage(session, {
+				slug: "c",
+				ext: "jpg",
+				name: "c",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 1280,
+				heightPx: 720,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+			await insertImage(session, {
+				slug: "d",
+				ext: "jpg",
+				name: "d",
+				addedAt: 4,
+				sizeBytes: 1024,
+				widthPx: 3840,
+				heightPx: 2160,
+				sha256: TEST_SHA256,
+				ready: false,
+			});
 
-		await using readSession = await createSession(client, "read");
-		const firstPage = await listImagesPage(readSession, { limit: 2 });
-		expect(firstPage.items.map((item) => item.slug as string)).toEqual(["d", "c"]);
-		expect(firstPage.nextCursor?.addedAt).toBe(10);
-		expect(firstPage.nextCursor?.slug as string | undefined).toBe("c");
+			await setImageTags(session, {
+				imageSlug: "a",
+				tagSlugs: ["resolution/4k", "motive/nature"],
+			});
+			await setImageTags(session, {
+				imageSlug: "b",
+				tagSlugs: ["resolution/4k"],
+			});
+			await setImageTags(session, {
+				imageSlug: "c",
+				tagSlugs: ["motive/nature"],
+			});
+			await setImageTags(session, {
+				imageSlug: "d",
+				tagSlugs: ["resolution/4k", "motive/nature"],
+			});
+			await session.commit();
 
-		const secondPage = await listImagesPage(readSession, {
-			limit: 2,
-			cursor: firstPage.nextCursor ?? undefined,
-		});
-		expect(secondPage.items.map((item) => item.slug as string)).toEqual(["b", "a"]);
-		expect(secondPage.nextCursor?.addedAt).toBe(10);
-		expect(secondPage.nextCursor?.slug as string | undefined).toBe("a");
+			await using readSession = await createSession(client, "read");
+			const readyOnly = await listImagesPage(readSession, {
+				limit: 10,
+				groupedTagSlugs: {
+					resolution: ["4k"],
+					motive: ["nature"],
+				},
+			});
 
-		const thirdPage = await listImagesPage(readSession, {
-			limit: 2,
-			cursor: secondPage.nextCursor ?? undefined,
-		});
-		expect(thirdPage.items.map((item) => item.slug as string)).toEqual(["z", "y"]);
-		expect(thirdPage.nextCursor).toBeNull();
+			expect(readyOnly.items.map((item) => item.slug as string)).toEqual(["a"]);
 
-		const allSlugs = [...firstPage.items, ...secondPage.items, ...thirdPage.items].map(
-			(item) => item.slug as string,
-		);
-		expect(allSlugs).toEqual(["d", "c", "b", "a", "z", "y"]);
-		expect(new Set(allSlugs).size).toBe(allSlugs.length);
-	});
+			const includingNotReady = await listImagesPage(readSession, {
+				limit: 10,
+				groupedTagSlugs: {
+					resolution: ["4k"],
+					motive: ["nature"],
+				},
+				includeNotReady: true,
+			});
 
-	it("returns non-ready image only when includeNotReady is true", async () => {
-		const client = await createMigratedClient();
+			expect(includingNotReady.items.map((item) => item.slug as string)).toEqual(["d", "a"]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
 
-		await using writeSession = await createSession(client, "write");
-		await insertImage(writeSession, {
-			slug: "pending",
-			ext: "jpg",
-			name: "pending",
-			addedAt: 1,
-			sizeBytes: 1024,
-			widthPx: 3840,
-			heightPx: 2160,
-			sha256: TEST_SHA256,
-			ready: false,
-		});
-		await writeSession.commit();
+	it(
+		"applies OR within groups and AND across groups for grouped tag filters",
+		async () => {
+			const client = await createMigratedClient();
 
-		await using readSession = await createSession(client, "read");
-		const hidden = await getImageBySlug(readSession, "pending");
-		expect(hidden).toBeNull();
+			await ensureTag(client, "resolution/4k", "4K");
+			await ensureTag(client, "resolution/1080p", "1080p");
+			await ensureTag(client, "aspect-ratio/16-9", "16:9");
+			await ensureTag(client, "aspect-ratio/16-10", "16:10");
+			await ensureTag(client, "aspect-ratio/21-9", "21:9");
 
-		const visible = await getImageBySlug(readSession, "pending", {
-			includeNotReady: true,
-		});
-		expect(visible?.image.slug as string | undefined).toBe("pending");
-		expect(visible?.image.widthPx).toBe(3840);
-		expect(visible?.image.heightPx).toBe(2160);
-	});
+			await using writeSession = await createSession(client, "write");
+			for (const image of [
+				{ slug: "b", addedAt: 4, tags: ["resolution/4k", "aspect-ratio/16-10"] },
+				{ slug: "a", addedAt: 3, tags: ["resolution/4k", "aspect-ratio/16-9"] },
+				{ slug: "c", addedAt: 2, tags: ["resolution/4k", "aspect-ratio/21-9"] },
+				{ slug: "d", addedAt: 1, tags: ["resolution/1080p", "aspect-ratio/16-9"] },
+			]) {
+				await insertImage(writeSession, {
+					slug: image.slug,
+					ext: "jpg",
+					name: image.slug,
+					addedAt: image.addedAt,
+					sizeBytes: 1024,
+					widthPx: 3840,
+					heightPx: 2160,
+					sha256: TEST_SHA256,
+					ready: true,
+				});
+
+				await setImageTags(writeSession, {
+					imageSlug: image.slug,
+					tagSlugs: image.tags,
+				});
+			}
+			await writeSession.commit();
+
+			await using readSession = await createSession(client, "read");
+			const page = await listImagesPage(readSession, {
+				limit: 10,
+				groupedTagSlugs: {
+					resolution: ["4k"],
+					"aspect-ratio": ["16-9", "16-10"],
+				},
+			});
+
+			expect(page.items.map((item) => item.slug as string)).toEqual(["b", "a"]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"keeps newest-first ordering stable across pages with cursor progression",
+		async () => {
+			const client = await createMigratedClient();
+
+			await using writeSession = await createSession(client, "write");
+			for (const image of [
+				{ slug: "d", addedAt: 10 },
+				{ slug: "c", addedAt: 10 },
+				{ slug: "b", addedAt: 10 },
+				{ slug: "a", addedAt: 10 },
+				{ slug: "z", addedAt: 9 },
+				{ slug: "y", addedAt: 9 },
+			]) {
+				await insertImage(writeSession, {
+					slug: image.slug,
+					ext: "jpg",
+					name: image.slug,
+					addedAt: image.addedAt,
+					sizeBytes: 1024,
+					widthPx: 3840,
+					heightPx: 2160,
+					sha256: TEST_SHA256,
+					ready: true,
+				});
+			}
+			await writeSession.commit();
+
+			await using readSession = await createSession(client, "read");
+			const firstPage = await listImagesPage(readSession, { limit: 2 });
+			expect(firstPage.items.map((item) => item.slug as string)).toEqual(["d", "c"]);
+			expect(firstPage.nextCursor?.addedAt).toBe(10);
+			expect(firstPage.nextCursor?.slug as string | undefined).toBe("c");
+
+			const secondPage = await listImagesPage(readSession, {
+				limit: 2,
+				cursor: firstPage.nextCursor ?? undefined,
+			});
+			expect(secondPage.items.map((item) => item.slug as string)).toEqual(["b", "a"]);
+			expect(secondPage.nextCursor?.addedAt).toBe(10);
+			expect(secondPage.nextCursor?.slug as string | undefined).toBe("a");
+
+			const thirdPage = await listImagesPage(readSession, {
+				limit: 2,
+				cursor: secondPage.nextCursor ?? undefined,
+			});
+			expect(thirdPage.items.map((item) => item.slug as string)).toEqual(["z", "y"]);
+			expect(thirdPage.nextCursor).toBeNull();
+
+			const allSlugs = [...firstPage.items, ...secondPage.items, ...thirdPage.items].map(
+				(item) => item.slug as string,
+			);
+			expect(allSlugs).toEqual(["d", "c", "b", "a", "z", "y"]);
+			expect(new Set(allSlugs).size).toBe(allSlugs.length);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"returns non-ready image only when includeNotReady is true",
+		async () => {
+			const client = await createMigratedClient();
+
+			await using writeSession = await createSession(client, "write");
+			await insertImage(writeSession, {
+				slug: "pending",
+				ext: "jpg",
+				name: "pending",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 3840,
+				heightPx: 2160,
+				sha256: TEST_SHA256,
+				ready: false,
+			});
+			await writeSession.commit();
+
+			await using readSession = await createSession(client, "read");
+			const hidden = await getImageBySlug(readSession, "pending");
+			expect(hidden).toBeNull();
+
+			const visible = await getImageBySlug(readSession, "pending", {
+				includeNotReady: true,
+			});
+			expect(visible?.image.slug as string | undefined).toBe("pending");
+			expect(visible?.image.widthPx).toBe(3840);
+			expect(visible?.image.heightPx).toBe(2160);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
 });
 
 describe("db/image-tags integration", () => {
-	it("replaces existing joins for one image", async () => {
-		const client = await createMigratedClient();
+	it(
+		"replaces existing joins for one image",
+		async () => {
+			const client = await createMigratedClient();
 
-		await ensureTag(client, "a/x", "X");
-		await ensureTag(client, "a/y", "Y");
-		await ensureTag(client, "a/z", "Z");
+			await ensureTag(client, "a/x", "X");
+			await ensureTag(client, "a/y", "Y");
+			await ensureTag(client, "a/z", "Z");
 
-		await using session = await createSession(client, "write");
-		await insertImage(session, {
-			slug: "img-1",
-			ext: "jpg",
-			name: "img-1",
-			addedAt: 2,
-			sizeBytes: 1024,
-			widthPx: 3840,
-			heightPx: 2160,
-			sha256: TEST_SHA256,
-			ready: true,
-		});
-		await insertImage(session, {
-			slug: "img-2",
-			ext: "jpg",
-			name: "img-2",
-			addedAt: 1,
-			sizeBytes: 1024,
-			widthPx: 3840,
-			heightPx: 2160,
-			sha256: TEST_SHA256,
-			ready: true,
-		});
+			await using session = await createSession(client, "write");
+			await insertImage(session, {
+				slug: "img-1",
+				ext: "jpg",
+				name: "img-1",
+				addedAt: 2,
+				sizeBytes: 1024,
+				widthPx: 3840,
+				heightPx: 2160,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+			await insertImage(session, {
+				slug: "img-2",
+				ext: "jpg",
+				name: "img-2",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 3840,
+				heightPx: 2160,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
 
-		await setImageTags(session, {
-			imageSlug: "img-1",
-			tagSlugs: ["a/x", "a/y"],
-		});
-		await setImageTags(session, { imageSlug: "img-2", tagSlugs: ["a/y"] });
-		await setImageTags(session, { imageSlug: "img-1", tagSlugs: ["a/z"] });
-		await session.commit();
+			await setImageTags(session, {
+				imageSlug: "img-1",
+				tagSlugs: ["a/x", "a/y"],
+			});
+			await setImageTags(session, { imageSlug: "img-2", tagSlugs: ["a/y"] });
+			await setImageTags(session, { imageSlug: "img-1", tagSlugs: ["a/z"] });
+			await session.commit();
 
-		const rowsResult = await client.execute(
-			"SELECT image_slug, tag_slug FROM image_tags ORDER BY image_slug ASC, tag_slug ASC",
-		);
-		const rows = rowsResult.rows.map((row) => ({
-			image_slug: getString(row, "image_slug"),
-			tag_slug: getString(row, "tag_slug"),
-		}));
+			const rowsResult = await client.execute(
+				"SELECT image_slug, tag_slug FROM image_tags ORDER BY image_slug ASC, tag_slug ASC",
+			);
+			const rows = rowsResult.rows.map((row) => ({
+				image_slug: getString(row, "image_slug"),
+				tag_slug: getString(row, "tag_slug"),
+			}));
 
-		expect(rows).toEqual([
-			{ image_slug: "img-1", tag_slug: "a/z" },
-			{ image_slug: "img-2", tag_slug: "a/y" },
-		]);
-	});
+			expect(rows).toEqual([
+				{ image_slug: "img-1", tag_slug: "a/z" },
+				{ image_slug: "img-2", tag_slug: "a/y" },
+			]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
 });
