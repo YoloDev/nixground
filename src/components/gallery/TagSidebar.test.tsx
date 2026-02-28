@@ -16,6 +16,7 @@ describe("TagSidebar", () => {
 		const html = renderToStaticMarkup(
 			<SidebarProvider>
 				<TagSidebar
+					onTagToggle={() => {}}
 					tagKinds={[
 						{
 							slug: assertTagKindSlug("resolution"),
@@ -29,7 +30,7 @@ describe("TagSidebar", () => {
 									kindSlug: assertTagKindSlug("resolution"),
 									system: false,
 									imageCount: 3,
-									selected: false,
+									selected: true,
 								},
 							],
 						},
@@ -43,5 +44,6 @@ describe("TagSidebar", () => {
 		expect(html).toContain("4K");
 		expect(html).toContain("4 images");
 		expect(html).toContain("3 images");
+		expect(html).toContain('aria-pressed="true"');
 	});
 });

@@ -1,14 +1,19 @@
 import { type } from "arktype";
 
-const SlugPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
-
-export const TagKindSlug = type("/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/#tagKindSlug");
+export const TagKindSlug = type("string#tagKindSlug").narrow(
+	(v, ctx) => /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(v) || ctx.mustBe("a tag kind slug"),
+);
 export type TagKindSlug = typeof TagKindSlug.infer;
 
-export const TagSlug = type("string#tagSlug");
+export const TagSlug = type("string#tagSlug").narrow(
+	(v, ctx) =>
+		/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v) || ctx.mustBe("kind/slug"),
+);
 export type TagSlug = typeof TagSlug.infer;
 
-export const Base64Sha256 = type("string#base64Sha256");
+export const Base64Sha256 = type("string#base64Sha256").narrow(
+	(v, ctx) => /^[A-Za-z0-9+/]{43}=$/.test(v) || ctx.mustBe("a base64-encoded SHA-256 hash"),
+);
 export type Base64Sha256 = typeof Base64Sha256.infer;
 
 export const ImageWidthPx = type("number.integer > 0#imageWidthPx");
@@ -39,14 +44,6 @@ export function assertTagSlug(value: string) {
 	if (result instanceof type.errors) {
 		throw new Error(result.summary);
 	}
-	if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(result)) {
-		throw new Error("Tag slug must match `kind/slug` format");
-	}
-
-	const [kind] = result.split("/");
-	if (!SlugPattern.test(kind)) {
-		throw new Error("Tag slug must start with a valid kind slug prefix");
-	}
 
 	return result;
 }
@@ -56,9 +53,7 @@ export function assertBase64Sha256(value: string) {
 	if (result instanceof type.errors) {
 		throw new Error(result.summary);
 	}
-	if (!/^[A-Za-z0-9+/]{43}=$/.test(result)) {
-		throw new Error("sha256 must be a base64-encoded SHA-256 digest");
-	}
+
 	return result;
 }
 

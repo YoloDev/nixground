@@ -1,10 +1,9 @@
 "use client";
 
 import { IconX } from "@tabler/icons-react";
-import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
-import { listAssignableTagsFn, uploadImageFn } from "@/api/upload-image";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -26,6 +25,8 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUploadImageMutation } from "@/queries/images";
+import { listAssignableTagsQueryOptions } from "@/queries/tags";
 
 type TagOption = {
 	readonly slug: string;
@@ -67,12 +68,15 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 	const [url, setUrl] = useState("");
 	const [file, setFile] = useState<File | null>(null);
 	const [selectedTags, setSelectedTags] = useState<TagOption[]>([]);
-	const [tagOptions, setTagOptions] = useState<readonly TagOption[]>([]);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-	const listTags = useServerFn(listAssignableTagsFn);
-	const uploadImage = useServerFn(uploadImageFn);
+	const assignableTagQuery = useQuery({
+		...listAssignableTagsQueryOptions(),
+		enabled: open,
+	});
+
+	const uploadImage = useUploadImageMutation();
 
 	useEffect(() => {
 		if (!slugWasManuallyEdited) {
@@ -84,20 +88,6 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 	}, [name, slug, slugWasManuallyEdited]);
 
 	const selectedTagSlugs = useMemo(() => selectedTags.map((tag) => tag.slug), [selectedTags]);
-
-	useEffect(() => {
-		if (!open) {
-			return;
-		}
-
-		void listTags()
-			.then((tags) => {
-				setTagOptions(tags);
-			})
-			.catch((error: unknown) => {
-				setErrorMessage(error instanceof Error ? error.message : "Failed to load tags");
-			});
-	}, [open, listTags]);
 
 	function onFileSelected(nextFile: File | null) {
 		setFile(nextFile);
@@ -157,7 +147,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 
 		setIsSubmitting(true);
 		try {
-			await uploadImage({ data: formData });
+			await uploadImage.mutateAsync(formData);
 			closeDialog();
 		} catch (error) {
 			setErrorMessage(error instanceof Error ? error.message : "Upload failed.");
@@ -279,7 +269,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 						<Field>
 							<FieldLabel htmlFor="upload-tags">Tags</FieldLabel>
 							<Combobox
-								items={tagOptions}
+								items={assignableTagQuery.data ?? []}
 								multiple
 								value={selectedTags}
 								onValueChange={(value) => setSelectedTags(value)}

@@ -10,7 +10,7 @@ import {
 	type MasonryScrollerProps,
 	type Positioner,
 } from "masonic";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 
 import type { ListImagesItem } from "@/api/list-images";
 
@@ -19,60 +19,23 @@ import { useDebounced } from "@/hooks/use-debounced";
 
 type ImageGalleryProps = {
 	readonly images: ListImagesItem[];
-	readonly fetchMore: (from: ListImagesItem) => Promise<ListImagesItem[]>;
+	readonly fetchMore: () => void;
+	readonly cacheKey: string;
 };
-
-type GalleryLoadingState = "idle" | "loading" | "done";
 
 export function shouldRequestNextPage(stopIndex: number, itemCount: number) {
 	return stopIndex > itemCount - 4;
 }
 
-export function createLoadMoreHandler(
-	fetchMore: (from: ListImagesItem) => Promise<ListImagesItem[]>,
-	appendImages: (images: ListImagesItem[]) => void,
-	loadingState: { current: GalleryLoadingState },
-) {
-	return (_startIndex: number, stopIndex: number, currentItems: ListImagesItem[]) => {
-		if (loadingState.current !== "idle") {
-			return;
-		}
+export function ImageGallery({ images, fetchMore, cacheKey }: ImageGalleryProps) {
+	const maybeLoadMore = useCallback(
+		(_startIndex: number, stopIndex: number, currentItems: ListImagesItem[]) => {
+			if (!shouldRequestNextPage(stopIndex, currentItems.length)) {
+				return;
+			}
 
-		if (!shouldRequestNextPage(stopIndex, currentItems.length)) {
-			return;
-		}
-
-		const from = currentItems.at(-1);
-		if (!from) {
-			return;
-		}
-
-		loadingState.current = "loading";
-		void fetchMore(from)
-			.then((newImages) => {
-				appendImages(newImages);
-				loadingState.current = newImages.length === 0 ? "done" : "idle";
-			})
-			.catch(() => {
-				loadingState.current = "idle";
-			});
-	};
-}
-
-export function ImageGallery(props: ImageGalleryProps) {
-	const { fetchMore } = props;
-	const [images, setImages] = useState(props.images);
-	const loadingState = useRef<GalleryLoadingState>("idle");
-
-	const maybeLoadMore = useMemo(
-		() =>
-			createLoadMoreHandler(
-				fetchMore,
-				(newImages) => {
-					setImages((prev) => [...prev, ...newImages]);
-				},
-				loadingState,
-			),
+			fetchMore();
+		},
 		[fetchMore],
 	);
 
@@ -84,6 +47,7 @@ export function ImageGallery(props: ImageGalleryProps) {
 		<section aria-label="Image gallery">
 			<ClientOnly>
 				<Masonry
+					key={cacheKey}
 					onRender={maybeLoadMore}
 					rowGutter={16}
 					columnGutter={16}

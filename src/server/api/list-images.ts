@@ -38,7 +38,7 @@ const CursorInput = type({
 });
 
 const ListImagesInputShape = type({
-	"cursor?": CursorInput,
+	"cursor?": CursorInput.or("undefined"),
 	"limit?": "number.integer",
 });
 

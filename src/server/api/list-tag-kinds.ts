@@ -12,9 +12,7 @@ export type ListTagKindsInput = {
 	readonly groupedTagSlugs?: Readonly<Record<string, readonly string[]>>;
 };
 
-export type ListTagKindsResponse = {
-	readonly data: TagKindTree[];
-};
+export type ListTagKindsResponse = readonly TagKindTree[];
 
 const ListTagKindsInputShape = type({
 	"groupedTagSlugs?": "Record<string, string[]>",
@@ -100,7 +98,5 @@ export const listTagKindsFn = createServerFn({ method: "GET" })
 			selectedTagSlugs: toSelectedTagSlugs(data.groupedTagSlugs),
 		});
 
-		return {
-			data: tagKinds,
-		};
+		return tagKinds;
 	});

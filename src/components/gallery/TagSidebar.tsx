@@ -9,16 +9,18 @@ import {
 	SidebarHeader,
 	SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 type TagSidebarProps = {
-	readonly tagKinds: ListTagKindsResponse["data"];
+	readonly tagKinds: ListTagKindsResponse;
+	readonly onTagToggle: (tagSlug: string) => void;
 };
 
 export function formatCountLabel(count: number) {
 	return `${count} ${count === 1 ? "image" : "images"}`;
 }
 
-export function TagSidebar({ tagKinds }: TagSidebarProps) {
+export function TagSidebar({ tagKinds, onTagToggle }: TagSidebarProps) {
 	if (tagKinds.length < 1) {
 		return null;
 	}
@@ -44,10 +46,23 @@ export function TagSidebar({ tagKinds }: TagSidebarProps) {
 							<ul className="mt-2 space-y-1">
 								{kind.tags.map((tag) => (
 									<li key={tag.slug}>
-										<div className="text-muted-foreground flex items-center justify-between gap-2 rounded-md px-2 py-1 text-sm">
+										<button
+											type="button"
+											onClick={() => {
+												onTagToggle(tag.slug);
+											}}
+											aria-pressed={tag.selected}
+											className={cn(
+												"focus-visible:ring-ring flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-sm outline-none transition-colors focus-visible:ring-2",
+												tag.selected
+													? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+													: "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
+											)}
+											data-selected={tag.selected ? "true" : undefined}
+										>
 											<span className="truncate">{tag.name}</span>
 											<span className="text-xs">{formatCountLabel(tag.imageCount)}</span>
-										</div>
+										</button>
 									</li>
 								))}
 							</ul>

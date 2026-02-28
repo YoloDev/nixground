@@ -1,82 +1,97 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useCallback } from "react";
+import { useQueryClient, useSuspenseInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+	createFileRoute,
+	retainSearchParams,
+	stripSearchParams,
+	useNavigate,
+} from "@tanstack/react-router";
+import { type } from "arktype";
+import { useCallback, useEffectEvent } from "react";
 
-import { listImagesPageFn, type ListImagesItem } from "@/api/list-images";
-import { listTagKindsFn } from "@/api/list-tag-kinds";
 import { ImageGallery } from "@/components/gallery/ImageGallery";
 import { TagSidebar } from "@/components/gallery/TagSidebar";
 import Header from "@/components/Header";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { UploadDialog } from "@/components/upload/UploadDialog";
+import { listImagesQueryOptions } from "@/queries/images";
+import { listTagKindsQueryOptions } from "@/queries/tags";
 
-import { parseIndexSearch, serializeGroupedTagFilters, type IndexSearch } from "../lib/query";
+const IndexSearch = type({
+	upload: type("boolean").default(false),
+	tags: type({
+		"[string]": type("string").array().as<readonly string[]>(),
+	})
+		.as<Readonly<Record<string, readonly string[]>>>()
+		.default(() => ({})),
+});
+
+type IndexSearch = typeof IndexSearch.infer;
 
 export const Route = createFileRoute("/")({
-	validateSearch: (search): IndexSearch => parseIndexSearch(search),
-	loaderDeps: ({ search }) => ({ tags: search.tags ?? {} }),
+	validateSearch: (search): IndexSearch => IndexSearch.assert(search),
+	loaderDeps: ({ search }) => ({ tags: search.tags }),
 	search: {
-		middlewares: [
-			({ search, next }) => {
-				const nextSearch = next(search);
-				const { tags: _tags, ...searchWithoutTags } = nextSearch;
-
-				return {
-					...searchWithoutTags,
-					...serializeGroupedTagFilters(search.tags),
-				};
-			},
-		],
+		middlewares: [retainSearchParams(["tags"]), stripSearchParams({ upload: false })],
 	},
-	loader: async ({ deps }) => {
-		const groupedTagInput = { groupedTagSlugs: deps.tags };
+	loader: async ({ deps, context }) => {
+		const { queryClient } = context;
 
-		const [galleryPage, tagKinds] = await Promise.all([
-			listImagesPageFn({
-				data: groupedTagInput,
-			}),
-			listTagKindsFn({
-				data: groupedTagInput,
-			}),
+		await Promise.all([
+			queryClient.prefetchQuery(listTagKindsQueryOptions(deps.tags)),
+			queryClient.prefetchInfiniteQuery(listImagesQueryOptions(deps.tags)),
 		]);
-
-		return {
-			galleryPage,
-			tagKinds: tagKinds.data,
-		};
 	},
 	component: App,
 });
 
 function App() {
 	const search = Route.useSearch();
-	const { galleryPage, tagKinds } = Route.useLoaderData();
+	const tagKindsQuery = useSuspenseQuery(listTagKindsQueryOptions(search.tags));
+	const imagesQuery = useSuspenseInfiniteQuery(listImagesQueryOptions(search.tags));
+	const images = imagesQuery.data.pages.flatMap((p) => p.data);
+	const imagesKey = useQueryClient()
+		.getQueryCache()
+		.find(listImagesQueryOptions(search.tags))!.queryHash;
+
 	const navigate = useNavigate({ from: "/" });
-	const loadMoreFn = useServerFn(listImagesPageFn);
-	const loadMore = useCallback(
-		async (prev: ListImagesItem) => {
-			const response = await loadMoreFn({
-				data: {
-					cursor: {
-						slug: prev.slug,
-						addedAt: prev.addedAt,
-					},
-					groupedTagSlugs: search.tags ?? {},
+	const fetchMore = useEffectEvent(() => {
+		if (!imagesQuery.isFetchingNextPage && imagesQuery.hasNextPage) {
+			void imagesQuery.fetchNextPage();
+		}
+	});
+
+	const onTagToggle = useCallback(
+		(tagSlug: string) => {
+			void navigate({
+				replace: true,
+				search: (prev) => {
+					const toggle = (tags: readonly string[], tag: string) =>
+						tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag];
+
+					const [group, tag] = tagSlug.split("/");
+					const prevTags = prev.tags;
+					const nextTags = {
+						...prevTags,
+						[group]: toggle(prevTags[group] ?? [], tag),
+					};
+
+					return {
+						...prev,
+						tags: nextTags,
+					};
 				},
 			});
-
-			return response.data;
 		},
-		[loadMoreFn, search.tags],
+		[navigate],
 	);
 
 	return (
 		<>
-			<TagSidebar tagKinds={tagKinds} />
+			<TagSidebar tagKinds={tagKindsQuery.data} onTagToggle={onTagToggle} />
 			<SidebarInset>
 				<Header />
 				<main className="p-8">
-					<ImageGallery images={galleryPage.data} fetchMore={loadMore} />
+					<ImageGallery images={images} fetchMore={fetchMore} cacheKey={imagesKey} />
 				</main>
 			</SidebarInset>
 
@@ -87,7 +102,7 @@ function App() {
 						replace: true,
 						search: (prev) => ({
 							...prev,
-							upload: open ? true : undefined,
+							upload: open ? true : false,
 						}),
 					});
 				}}
