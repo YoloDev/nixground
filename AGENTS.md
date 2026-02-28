@@ -8,7 +8,6 @@
 - Get permissions from the user before running database migrations.
 - Prefer `just` recipes for common project workflows (tests, migrations, and recurring local tasks) when available.
 - The app is local-only (never hosted) and targets a user-run setup with Turso (metadata) and Cloudflare R2 (images); use direct SQL (no ORM).
-- Do not run `geni` commands that affect the database; provide commands for the user to run instead.
 - Always assume migrations have already been run unless explicitly told they are in progress; do not edit existing migrations retroactively. Create new migrations instead.
 - For all database/data-model format rules and schema conventions, use `docs/data-model.md` as the source of truth.
 - For test conventions and patterns (including Bun mock cleanup with `using`), use `docs/testing.md` as the source of truth.
@@ -16,7 +15,6 @@
 - For `createServerFn` handlers, always use `.inputValidator(...)` and normalize boundary payloads into typed discriminated unions before handler logic.
 - Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 - The justfile is located at `.justfile`.
-- Always run formatting after editing code.
 - Server functions live in `src/server/api` and are importable using `@/api/*`.
 - Use conventional-commit messages for git commits.
 
@@ -24,7 +22,8 @@
 
 - The repository lives at organization YoloDev, repository nixground.
 - Use the github mcp for any changes to github issues/projects. If you are not able to do what you need to, ask the user for help. The github cli is not available for you.
-- Use GitHub Issues as the planning source of truth; do not rely on `PLAN.md` for active planning.
+- Use GitHub Issues as the planning source of truth for long-term planning; do not rely on `PLAN.md` for active planning.
+- Use the `todowrite` and `todoread` tools for short-term active-session planning.
 - Never create, edit, close, or reprioritize GitHub issues without explicit user approval in the current conversation.
 - Prefer concrete, shippable issues; avoid meta "track the whole project" or "create issues" issues.
 - Use sub-issues for implementation granularity (feature slices, supporting tasks, and test coverage tied to each feature).

@@ -46,6 +46,17 @@
                   geni
                   just-mcp
                 ];
+
+                env = [
+                  {
+                    name = "OPENCODE_DISABLE_LSP_DOWNLOAD";
+                    value = "true";
+                  }
+                  {
+                    name = "OPENCODE_EXPERIMENTAL_LSP_TOOL";
+                    value = "true";
+                  }
+                ];
               };
 
             pre-commit.settings.hooks =
@@ -63,6 +74,7 @@
 
                 bun-test = {
                   enable = true;
+                  priority = 0;
                   name = "bun-test";
                   files = "src\/.*?\.(ts|tsx|mts)$";
                   pass_filenames = false;
@@ -75,6 +87,7 @@
 
                 oxlint = {
                   enable = true;
+                  priority = 0;
                   name = "oxlint";
                   files = "src\/.*?\.(ts|tsx|mts)$";
                   pass_filenames = true;
@@ -83,10 +96,21 @@
 
                 stylelint = {
                   enable = true;
+                  priority = 0;
                   name = "stylelint";
                   files = "src\/.*?\.(css|scss|sass)$";
                   pass_filenames = true;
                   entry = "${pkgs.bun}/bin/bun --bun stylelint";
+                };
+
+                sqlfluff = {
+                  enable = true;
+                  priority = 0;
+                  name = "sqlfluff";
+                  files = "migrations\/.*?\.(up|down)\.(sql)$";
+                  pass_filenames = true;
+                  entry = "${pkgs.sqlfluff}/bin/sqlfluff lint";
+                  require_serial = true;
                 };
 
                 oxfmt = {
@@ -96,15 +120,6 @@
                   files = "\.(ts|tsx|mts|json|md|jsonc|yaml|yml|toml|html)$";
                   pass_filenames = true;
                   entry = "${pkgs.oxfmt}/bin/oxfmt";
-                  require_serial = true;
-                };
-
-                sqlfluff = {
-                  enable = true;
-                  name = "sqlfluff";
-                  files = "migrations\/.*?\.(up|down)\.(sql)$";
-                  pass_filenames = true;
-                  entry = "${pkgs.sqlfluff}/bin/sqlfluff lint";
                   require_serial = true;
                 };
               };

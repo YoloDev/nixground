@@ -1,5 +1,36 @@
 {
 	"$schema": "https://opencode.ai/config.json",
+	"default_agent": "plan",
+	"agent": {
+		"plan": {
+			"permission": {
+				"github_issue_write": "ask",
+				"github_projects_write": "ask",
+				"github_sub_issue_write": "ask"
+			}
+		}
+	},
+	"formatter": {
+		"prettier": {
+			"disabled": true
+		},
+		"oxfmt": {
+			"command": ["oxfmt", "$FILE"],
+			"extensions": [
+				".ts",
+				".tsx",
+				".js",
+				".jsx",
+				".json",
+				".md",
+				".jsonc",
+				".yaml",
+				".yml",
+				".toml",
+				".html"
+			]
+		}
+	},
 	"mcp": {
 		"tanstack": {
 			"type": "local",
@@ -36,5 +67,17 @@
 				"X-MCP-Toolsets": "context,repos,issues,users,projects,pull_requests,labels"
 			}
 		}
+	},
+	"plugin": ["@tarquinen/opencode-dcp@latest"],
+	"watcher": {
+		"ignore": [
+			"node_modules/**",
+			"dist/**",
+			".git/**",
+			".tanstack/**",
+			".direnv/**",
+			".output/**",
+			"result/**"
+		]
 	}
 }
