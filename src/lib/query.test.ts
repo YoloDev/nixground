@@ -5,7 +5,7 @@ import {
 	parseIndexSearch,
 	serializeGroupedTagFilters,
 	type GroupedTagFilters,
-} from "./index.query";
+} from "./query";
 
 function matchesGroupedFilters(filters: GroupedTagFilters, imageTagSlugs: readonly string[]) {
 	const tagsByGroup = new Map<string, Set<string>>();
@@ -99,6 +99,10 @@ describe("index route search parsing", () => {
 		});
 	});
 
+	it("returns an empty object when there are no grouped tags to serialize", () => {
+		expect(serializeGroupedTagFilters(undefined)).toEqual({});
+	});
+
 	it("round-trips grouped tags through serialization and parsing", () => {
 		const original: GroupedTagFilters = {
 			resolution: ["4k", "1080p"],
@@ -106,10 +110,6 @@ describe("index route search parsing", () => {
 		};
 
 		const serialized = serializeGroupedTagFilters(original);
-		expect(serialized).toBeDefined();
-		if (!serialized) {
-			throw new Error("Expected serialized grouped tags");
-		}
 
 		const parsed = parseGroupedTagFilters(serialized);
 		expect(parsed).toEqual({

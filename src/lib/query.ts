@@ -86,9 +86,9 @@ export function parseIndexSearch(search: Record<string, unknown>): IndexSearch {
 
 export function serializeGroupedTagFilters(
 	groupedTags: GroupedTagFilters | undefined,
-): SerializedGroupedTagFilters | undefined {
+): SerializedGroupedTagFilters {
 	if (!groupedTags) {
-		return undefined;
+		return {};
 	}
 
 	const serialized: Array<[string, string]> = [];
@@ -112,7 +112,7 @@ export function serializeGroupedTagFilters(
 	serialized.sort(([left], [right]) => left.localeCompare(right));
 
 	if (serialized.length === 0) {
-		return undefined;
+		return {};
 	}
 
 	return Object.fromEntries(serialized);
