@@ -21,6 +21,7 @@ describe("TagSidebar", () => {
 						{
 							slug: assertTagKindSlug("resolution"),
 							name: "Resolution",
+							systemOnly: false,
 							imageCount: 4,
 							hasSelected: false,
 							tags: [

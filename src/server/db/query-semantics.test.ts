@@ -4,9 +4,12 @@ import { readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { assertTagKindSlug, assertTagSlug } from "@/lib/data-model";
+
 import { DbSession } from "./client";
 import { setImageTags } from "./image-tags";
 import { getImageBySlug, insertImage, listImagesPage } from "./images";
+import { listTagKindsWithTagsAndCounts } from "./tags";
 
 const TEST_SHA256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=";
 const INTEGRATION_TIMEOUT_MS = 15_000;
@@ -357,6 +360,74 @@ describe("db/image-tags integration", () => {
 				{ image_slug: "img-1", tag_slug: "a/z" },
 				{ image_slug: "img-2", tag_slug: "a/y" },
 			]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+});
+
+describe("db/tags integration", () => {
+	it(
+		"returns kind-level systemOnly flag from tag_kinds",
+		async () => {
+			const client = await createMigratedClient();
+
+			await client.execute({
+				sql: "INSERT INTO tag_kinds (slug, name, system_only) VALUES (?, ?, ?)",
+				args: ["userkind", "User kind", 0],
+			});
+			await client.execute({
+				sql: "INSERT INTO tag_kinds (slug, name, system_only) VALUES (?, ?, ?)",
+				args: ["systemkind", "System kind", 1],
+			});
+			await client.execute({
+				sql: "INSERT INTO tags (slug, name, kind_slug, system) VALUES (?, ?, ?, ?)",
+				args: ["userkind/regular", "Regular", "userkind", 0],
+			});
+			await client.execute({
+				sql: "INSERT INTO tags (slug, name, kind_slug, system) VALUES (?, ?, ?, ?)",
+				args: ["systemkind/auto", "Auto", "systemkind", 1],
+			});
+
+			await using session = await createSession(client, "read");
+			const tagKinds = await listTagKindsWithTagsAndCounts(session);
+
+			const systemKind = tagKinds.find((kind) => kind.slug === assertTagKindSlug("systemkind"));
+			const userKind = tagKinds.find((kind) => kind.slug === assertTagKindSlug("userkind"));
+
+			expect(systemKind).toEqual({
+				slug: assertTagKindSlug("systemkind"),
+				name: "System kind",
+				systemOnly: true,
+				imageCount: 0,
+				hasSelected: false,
+				tags: [
+					{
+						slug: assertTagSlug("systemkind/auto"),
+						name: "Auto",
+						kindSlug: assertTagKindSlug("systemkind"),
+						system: true,
+						imageCount: 0,
+						selected: false,
+					},
+				],
+			});
+			expect(userKind).toEqual({
+				slug: assertTagKindSlug("userkind"),
+				name: "User kind",
+				systemOnly: false,
+				imageCount: 0,
+				hasSelected: false,
+				tags: [
+					{
+						slug: assertTagSlug("userkind/regular"),
+						name: "Regular",
+						kindSlug: assertTagKindSlug("userkind"),
+						system: false,
+						imageCount: 0,
+						selected: false,
+					},
+				],
+			});
 		},
 		INTEGRATION_TIMEOUT_MS,
 	);

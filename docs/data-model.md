@@ -46,6 +46,7 @@ R2 object keys are composed in application code as `slug.ext`.
 
 - `slug` (`TEXT`, primary key)
 - `name` (`TEXT`, not null)
+- `system_only` (`INTEGER`, not null, default `0`): marks kinds where user-created tags are not allowed (`1` = system-only kind).
 
 Used to group tags in the UI and filtering model.
 

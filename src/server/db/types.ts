@@ -25,6 +25,7 @@ export type TagRecord = {
 export type TagKindTree = {
 	slug: TagKindSlug;
 	name: string;
+	systemOnly: boolean;
 	imageCount: number;
 	hasSelected: boolean;
 	tags: TagRecord[];

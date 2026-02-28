@@ -78,6 +78,7 @@ kind_counts AS (
 SELECT
 	k.slug AS kind_slug,
 	k.name AS kind_name,
+	k.system_only,
 	COALESCE(kc.image_count, 0) AS image_count
 FROM tag_kinds k
 LEFT JOIN kind_counts kc ON kc.kind_slug = k.slug
@@ -123,6 +124,7 @@ ORDER BY t.kind_slug ASC, t.name ASC
 		return {
 			slug: kindSlug,
 			name: assertTagKindName(String(row.kind_name)),
+			systemOnly: Number(row.system_only) === 1,
 			imageCount: Number(row.image_count),
 			hasSelected: tags.some((tag) => tag.selected),
 			tags,
