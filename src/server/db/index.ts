@@ -7,6 +7,23 @@ export {
 	listImagesPage,
 	markImageReady,
 } from "./images";
-export { listAssignableTags, listTagKindsWithTagsAndCounts } from "./tags";
+export {
+	deleteTag,
+	deleteTagKind,
+	listAssignableTags,
+	listTagKindsForManagement,
+	listTagKindsWithTagsAndCounts,
+	listTagsForManagement,
+	upsertTag,
+	upsertTagKind,
+} from "./tags";
 export { setImageTags } from "./image-tags";
-export type { ImageCursor, ImageRecord, ImageWithMeta, TagKindTree, TagRecord } from "./types";
+export type {
+	ImageCursor,
+	ImageRecord,
+	ImageWithMeta,
+	TagDefinitionRecord,
+	TagKindRecord,
+	TagKindTree,
+	TagRecord,
+} from "./types";

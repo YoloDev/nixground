@@ -31,6 +31,19 @@ export type TagKindTree = {
 	tags: TagRecord[];
 };
 
+export type TagKindRecord = {
+	slug: TagKindSlug;
+	name: string;
+	systemOnly: boolean;
+};
+
+export type TagDefinitionRecord = {
+	slug: TagSlug;
+	name: string;
+	kindSlug: TagKindSlug;
+	system: boolean;
+};
+
 export type ImageCursor = {
 	addedAt: number;
 	slug: ImageSlug;

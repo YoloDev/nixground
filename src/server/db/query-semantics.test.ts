@@ -9,7 +9,14 @@ import { assertTagKindSlug, assertTagSlug } from "@/lib/data-model";
 import { DbSession } from "./client";
 import { setImageTags } from "./image-tags";
 import { getImageBySlug, insertImage, listImagesPage } from "./images";
-import { listTagKindsWithTagsAndCounts } from "./tags";
+import {
+	createTag,
+	createTagKind,
+	deleteTag,
+	deleteTagKind,
+	listTagKindsWithTagsAndCounts,
+	updateTag,
+} from "./tags";
 
 const TEST_SHA256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=";
 const INTEGRATION_TIMEOUT_MS = 15_000;
@@ -63,6 +70,18 @@ async function ensureTag(client: Client, tagSlug: string, name: string) {
 		sql: "INSERT OR IGNORE INTO tags (slug, name, kind_slug, system) VALUES (?, ?, ?, 0)",
 		args: [tagSlug, name, kindSlug],
 	});
+}
+
+async function expectRejectsWithMessage(promise: Promise<unknown>, expectedMessage: string) {
+	try {
+		await promise;
+		throw new Error("Expected promise to reject");
+	} catch (error) {
+		if (!(error instanceof Error)) {
+			throw error;
+		}
+		expect(error.message).toContain(expectedMessage);
+	}
 }
 
 describe("db/images integration", () => {
@@ -428,6 +447,113 @@ describe("db/tags integration", () => {
 					},
 				],
 			});
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"blocks creating user tags in system-only kinds",
+		async () => {
+			const client = await createMigratedClient();
+
+			await client.execute({
+				sql: "INSERT INTO tag_kinds (slug, name, system_only) VALUES (?, ?, ?)",
+				args: ["systemkind", "System kind", 1],
+			});
+
+			await using session = await createSession(client, "write");
+			await expectRejectsWithMessage(
+				createTag(session, {
+					slug: "systemkind/example",
+					name: "Example",
+				}),
+				"Tag kind is system-only: systemkind",
+			);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"blocks editing and deleting system tags",
+		async () => {
+			const client = await createMigratedClient();
+
+			await client.execute({
+				sql: "INSERT INTO tag_kinds (slug, name, system_only) VALUES (?, ?, ?)",
+				args: ["systemkind", "System kind", 1],
+			});
+			await client.execute({
+				sql: "INSERT INTO tags (slug, name, kind_slug, system) VALUES (?, ?, ?, 1)",
+				args: ["systemkind/auto", "Auto", "systemkind"],
+			});
+
+			await using session = await createSession(client, "write");
+			await expectRejectsWithMessage(
+				updateTag(session, {
+					slug: "systemkind/auto",
+					name: "Updated",
+				}),
+				"System tags are not editable: systemkind/auto",
+			);
+			await expectRejectsWithMessage(
+				deleteTag(session, {
+					slug: "systemkind/auto",
+				}),
+				"System tags are not editable: systemkind/auto",
+			);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"allows CRUD for non-system-only kinds and user tags",
+		async () => {
+			const client = await createMigratedClient();
+
+			await using writeSession = await createSession(client, "write");
+			await createTagKind(writeSession, {
+				slug: "subject",
+				name: "Subject",
+			});
+			await createTag(writeSession, {
+				slug: "subject/portrait",
+				name: "Portrait",
+			});
+			await updateTag(writeSession, {
+				slug: "subject/portrait",
+				name: "People portrait",
+			});
+			await deleteTag(writeSession, { slug: "subject/portrait" });
+			await deleteTagKind(writeSession, { slug: "subject" });
+			await writeSession.commit();
+
+			const kinds = await client.execute("SELECT slug FROM tag_kinds WHERE slug = 'subject'");
+			const tags = await client.execute("SELECT slug FROM tags WHERE slug = 'subject/portrait'");
+			expect(kinds.rows).toHaveLength(0);
+			expect(tags.rows).toHaveLength(0);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"blocks deleting tag kinds that still contain tags",
+		async () => {
+			const client = await createMigratedClient();
+
+			await client.execute({
+				sql: "INSERT INTO tag_kinds (slug, name, system_only) VALUES (?, ?, ?)",
+				args: ["subject", "Subject", 0],
+			});
+			await client.execute({
+				sql: "INSERT INTO tags (slug, name, kind_slug, system) VALUES (?, ?, ?, 0)",
+				args: ["subject/portrait", "Portrait", "subject"],
+			});
+
+			await using session = await createSession(client, "write");
+			await expectRejectsWithMessage(
+				deleteTagKind(session, { slug: "subject" }),
+				"Tag kind has tags and cannot be deleted: subject",
+			);
 		},
 		INTEGRATION_TIMEOUT_MS,
 	);
