@@ -26,6 +26,20 @@ This is the source of truth for database/data-model format rules and schema conv
 - Do not edit existing migrations retroactively; create new migrations for changes.
 - Do not add database column defaults in general; prefer explicit values from application code unless a default is explicitly required by the database engine/mechanism used for the migration step.
 
+## SQL write conventions
+
+- For idempotent create-or-update writes on SQLite/libSQL, prefer SQL UPSERT (`INSERT ... ON CONFLICT DO UPDATE`) over fetch-then-insert/update.
+- Use fetch-then-branch writes only when business logic requires multi-step validation and distinct domain errors before writing.
+
+Example:
+
+```sql
+INSERT INTO tag_kinds (slug, name, system_only)
+VALUES (?, ?, 0)
+ON CONFLICT(slug) DO UPDATE
+SET name = excluded.name;
+```
+
 ## Core tables
 
 ### images
