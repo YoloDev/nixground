@@ -41,10 +41,24 @@ describe("TagSidebar", () => {
 		);
 
 		expect(html).toContain("Tag filters");
+		expect(html).toContain("Manage");
+		expect(html).toContain('href="/tags"');
 		expect(html).toContain("Resolution");
 		expect(html).toContain("4K");
 		expect(html).toContain("4 images");
 		expect(html).toContain("3 images");
 		expect(html).toContain('aria-pressed="true"');
+	});
+
+	it("renders a minimal shell when no tag kinds are present", () => {
+		const html = renderToStaticMarkup(
+			<SidebarProvider>
+				<TagSidebar onTagToggle={() => {}} tagKinds={[]} />
+			</SidebarProvider>,
+		);
+
+		expect(html).toContain("Tag filters");
+		expect(html).toContain("Manage");
+		expect(html).toContain("No tags yet.");
 	});
 });

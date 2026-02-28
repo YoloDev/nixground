@@ -4,7 +4,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
-export default function Header() {
+type HeaderProps = {
+	showUpload?: boolean;
+};
+
+export default function Header({ showUpload = true }: HeaderProps) {
 	return (
 		<header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
 			<div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
@@ -18,16 +22,18 @@ export default function Header() {
 				>
 					NixGround
 				</Link>
-				<div className="ml-auto flex items-center gap-2">
-					<Link
-						from="/"
-						to="/"
-						search={(prev) => ({ ...prev, upload: true })}
-						className={buttonVariants({ size: "sm" })}
-					>
-						Upload
-					</Link>
-				</div>
+				{showUpload ? (
+					<div className="ml-auto flex items-center gap-2">
+						<Link
+							from="/"
+							to="/"
+							search={(prev) => ({ ...prev, upload: true })}
+							className={buttonVariants({ size: "sm" })}
+						>
+							Upload
+						</Link>
+					</div>
+				) : null}
 			</div>
 		</header>
 	);
