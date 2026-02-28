@@ -1,5 +1,15 @@
 import type { ListTagKindsResponse } from "@/api/list-tag-kinds";
 
+import {
+	Sidebar,
+	SidebarContent,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarGroupLabel,
+	SidebarHeader,
+	SidebarSeparator,
+} from "@/components/ui/sidebar";
+
 type TagSidebarProps = {
 	readonly tagKinds: ListTagKindsResponse["data"];
 };
@@ -14,18 +24,23 @@ export function TagSidebar({ tagKinds }: TagSidebarProps) {
 	}
 
 	return (
-		<aside aria-label="Tag filters" className="w-full lg:max-w-xs lg:pr-4">
-			<div className="bg-card/70 sticky top-20 rounded-xl border p-4">
+		<Sidebar aria-label="Tag filters" variant="inset" collapsible="offcanvas">
+			<SidebarHeader>
 				<h2 className="text-sm font-semibold tracking-wide uppercase">Tags</h2>
-				<ul className="mt-3 space-y-4">
-					{tagKinds.map((kind) => (
-						<li key={kind.slug}>
-							<div className="flex items-center justify-between gap-2">
-								<h3 className="text-sm font-medium">{kind.name}</h3>
-								<span className="text-muted-foreground text-xs">
-									{formatCountLabel(kind.imageCount)}
-								</span>
-							</div>
+			</SidebarHeader>
+			<SidebarSeparator />
+			<SidebarContent>
+				{tagKinds.map((kind) => (
+					<SidebarGroup key={kind.slug}>
+						<div className="flex items-center justify-between gap-2">
+							<SidebarGroupLabel className="h-auto p-0 text-sm font-medium text-foreground">
+								{kind.name}
+							</SidebarGroupLabel>
+							<span className="text-muted-foreground text-xs">
+								{formatCountLabel(kind.imageCount)}
+							</span>
+						</div>
+						<SidebarGroupContent>
 							<ul className="mt-2 space-y-1">
 								{kind.tags.map((tag) => (
 									<li key={tag.slug}>
@@ -36,10 +51,10 @@ export function TagSidebar({ tagKinds }: TagSidebarProps) {
 									</li>
 								))}
 							</ul>
-						</li>
-					))}
-				</ul>
-			</div>
-		</aside>
+						</SidebarGroupContent>
+					</SidebarGroup>
+				))}
+			</SidebarContent>
+		</Sidebar>
 	);
 }

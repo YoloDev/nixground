@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { assertTagKindSlug, assertTagSlug } from "@/lib/data-model";
 
 import { formatCountLabel, TagSidebar } from "./TagSidebar";
@@ -13,26 +14,28 @@ describe("TagSidebar", () => {
 
 	it("renders kinds, tags, and counts", () => {
 		const html = renderToStaticMarkup(
-			<TagSidebar
-				tagKinds={[
-					{
-						slug: assertTagKindSlug("resolution"),
-						name: "Resolution",
-						imageCount: 4,
-						hasSelected: false,
-						tags: [
-							{
-								slug: assertTagSlug("resolution/4k"),
-								name: "4K",
-								kindSlug: assertTagKindSlug("resolution"),
-								system: false,
-								imageCount: 3,
-								selected: false,
-							},
-						],
-					},
-				]}
-			/>,
+			<SidebarProvider>
+				<TagSidebar
+					tagKinds={[
+						{
+							slug: assertTagKindSlug("resolution"),
+							name: "Resolution",
+							imageCount: 4,
+							hasSelected: false,
+							tags: [
+								{
+									slug: assertTagSlug("resolution/4k"),
+									name: "4K",
+									kindSlug: assertTagKindSlug("resolution"),
+									system: false,
+									imageCount: 3,
+									selected: false,
+								},
+							],
+						},
+					]}
+				/>
+			</SidebarProvider>,
 		);
 
 		expect(html).toContain("Tag filters");

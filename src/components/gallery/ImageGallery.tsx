@@ -1,8 +1,21 @@
+import { useWindowSize } from "@react-hook/window-size";
 import { ClientOnly } from "@tanstack/react-router";
-import { Masonry } from "masonic";
-import { useCallback, useRef, useState } from "react";
+import {
+	useContainerPosition,
+	useMasonry,
+	usePositioner,
+	useResizeObserver,
+	useScroller,
+	type MasonryProps,
+	type MasonryScrollerProps,
+	type Positioner,
+} from "masonic";
+import { useMemo, useRef, useState } from "react";
 
 import type { ListImagesItem } from "@/api/list-images";
+
+import { useSidebar } from "@/components/ui/sidebar";
+import { useDebounced } from "@/hooks/use-debounced";
 
 type ImageGalleryProps = {
 	readonly images: ListImagesItem[];
@@ -51,14 +64,15 @@ export function ImageGallery(props: ImageGalleryProps) {
 	const [images, setImages] = useState(props.images);
 	const loadingState = useRef<GalleryLoadingState>("idle");
 
-	const maybeLoadMore = useCallback(
-		createLoadMoreHandler(
-			fetchMore,
-			(newImages) => {
-				setImages((prev) => [...prev, ...newImages]);
-			},
-			loadingState,
-		),
+	const maybeLoadMore = useMemo(
+		() =>
+			createLoadMoreHandler(
+				fetchMore,
+				(newImages) => {
+					setImages((prev) => [...prev, ...newImages]);
+				},
+				loadingState,
+			),
 		[fetchMore],
 	);
 
@@ -82,6 +96,72 @@ export function ImageGallery(props: ImageGalleryProps) {
 			</ClientOnly>
 		</section>
 	);
+}
+
+function Masonry<Item>(props: MasonryProps<Item>) {
+	const sidebar = useSidebar();
+	const debouncedSidebarState = useDebounced(sidebar.state, 200);
+
+	const containerRef = useRef<HTMLElement>(null);
+	const windowSize = useWindowSize({
+		initialWidth: undefined,
+		initialHeight: undefined,
+	});
+	const containerPos = useContainerPosition(containerRef, [debouncedSidebarState, ...windowSize]);
+
+	const nextProps = {
+		offset: containerPos.offset,
+		width: containerPos.width || windowSize[0],
+		height: windowSize[1],
+		containerRef,
+		onRender: props.onRender,
+		rowGutter: props.rowGutter,
+		columnGutter: props.columnGutter,
+		items: props.items,
+		itemKey: props.itemKey,
+		render: props.render,
+		itemHeightEstimate: props.itemHeightEstimate,
+		columnWidth: props.columnWidth,
+		positioner: undefined! as Positioner,
+		resizeObserver: undefined! as ResizeObserver,
+	};
+
+	nextProps.positioner = usePositioner(nextProps);
+	nextProps.resizeObserver = useResizeObserver(nextProps.positioner);
+
+	return <MasonryScroller {...nextProps} />;
+}
+
+function MasonryScroller<Item>(props: MasonryScrollerProps<Item>) {
+	// We put this in its own layer because it's the thing that will trigger the most updates
+	// and we don't want to slower ourselves by cycling through all the functions, objects, and effects
+	// of other hooks
+	const { scrollTop, isScrolling } = useScroller(props.offset, props.scrollFps);
+	// This is an update-heavy phase and while we could just Object.assign here,
+	// it is way faster to inline and there's a relatively low hit to he bundle
+	// size.
+	return useMasonry<Item>({
+		scrollTop,
+		isScrolling,
+		positioner: props.positioner,
+		resizeObserver: props.resizeObserver,
+		items: props.items,
+		onRender: props.onRender,
+		as: props.as,
+		id: props.id,
+		className: props.className,
+		style: props.style,
+		role: props.role,
+		tabIndex: props.tabIndex,
+		containerRef: props.containerRef,
+		itemAs: props.itemAs,
+		itemStyle: props.itemStyle,
+		itemHeightEstimate: props.itemHeightEstimate,
+		itemKey: props.itemKey,
+		overscanBy: props.overscanBy,
+		height: props.height,
+		render: props.render,
+	});
 }
 
 type ImageCardProps = {

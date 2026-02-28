@@ -2,8 +2,14 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
-import Header from "../components/Header";
+import { SidebarProvider } from "@/components/ui/sidebar";
+
 import appCss from "../styles.css?url";
+
+type RootStyleVars = React.CSSProperties & {
+	"--sidebar-width": string;
+	"--header-height": string;
+};
 
 export const Route = createRootRoute({
 	head: () => ({
@@ -30,14 +36,18 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+	const rootStyle: RootStyleVars = {
+		"--sidebar-width": "calc(var(--spacing) * 72)",
+		"--header-height": "calc(var(--spacing) * 12)",
+	};
+
 	return (
 		<html lang="en">
 			<head>
 				<HeadContent />
 			</head>
 			<body>
-				<Header />
-				{children}
+				<SidebarProvider style={rootStyle}>{children}</SidebarProvider>
 				<TanStackDevtools
 					config={{
 						position: "bottom-right",

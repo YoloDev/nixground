@@ -1,21 +1,27 @@
 import { Link } from "@tanstack/react-router";
 
 import { buttonVariants } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function Header() {
 	return (
-		<header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 backdrop-blur">
-			<div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
-				<Link to="/" className="text-sm font-semibold tracking-wide">
+		<header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+			<div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+				<SidebarTrigger className="-ml-1" />
+				<Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+				<Link to="/" className="text-base font-medium">
 					NixGround
 				</Link>
-				<Link
-					to="/"
-					search={(prev) => ({ ...prev, upload: true })}
-					className={buttonVariants({ size: "sm" })}
-				>
-					Upload
-				</Link>
+				<div className="ml-auto flex items-center gap-2">
+					<Link
+						to="/"
+						search={(prev) => ({ ...prev, upload: true })}
+						className={buttonVariants({ size: "sm" })}
+					>
+						Upload
+					</Link>
+				</div>
 			</div>
 		</header>
 	);

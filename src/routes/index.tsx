@@ -6,6 +6,8 @@ import { listImagesPageFn, type ListImagesItem } from "@/api/list-images";
 import { listTagKindsFn } from "@/api/list-tag-kinds";
 import { ImageGallery } from "@/components/gallery/ImageGallery";
 import { TagSidebar } from "@/components/gallery/TagSidebar";
+import Header from "@/components/Header";
+import { SidebarInset } from "@/components/ui/sidebar";
 import { UploadDialog } from "@/components/upload/UploadDialog";
 
 import { parseIndexSearch, serializeGroupedTagFilters, type IndexSearch } from "../lib/query";
@@ -69,11 +71,14 @@ function App() {
 	);
 
 	return (
-		<main className="mx-auto min-h-[calc(100dvh-3.5rem)] w-full max-w-7xl px-4 py-8 sm:px-6">
-			<div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(16rem,18rem)_minmax(0,1fr)] lg:gap-8">
-				<TagSidebar tagKinds={tagKinds} />
-				<ImageGallery images={galleryPage.data} fetchMore={loadMore} />
-			</div>
+		<>
+			<TagSidebar tagKinds={tagKinds} />
+			<SidebarInset>
+				<Header />
+				<main className="p-8">
+					<ImageGallery images={galleryPage.data} fetchMore={loadMore} />
+				</main>
+			</SidebarInset>
 
 			<UploadDialog
 				open={search.upload === true}
@@ -87,6 +92,6 @@ function App() {
 					});
 				}}
 			/>
-		</main>
+		</>
 	);
 }
