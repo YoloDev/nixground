@@ -23,7 +23,7 @@
 - The repository lives at organization YoloDev, repository nixground.
 - Use the github mcp for any changes to github issues/projects. If you are not able to do what you need to, ask the user for help. The github cli is not available for you.
 - Use GitHub Issues as the planning source of truth for long-term planning; do not rely on `PLAN.md` for active planning.
-- Use the `todowrite` and `todoread` tools for short-term active-session planning.
+- Use the `todowrite` and `todoread` tools for short-term active-session planning, or when doing any multi-step process to keep track of progress.
 - Never create, edit, close, or reprioritize GitHub issues without explicit user approval in the current conversation.
 - Prefer concrete, shippable issues; avoid meta "track the whole project" or "create issues" issues.
 - Use sub-issues for implementation granularity (feature slices, supporting tasks, and test coverage tied to each feature).
