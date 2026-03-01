@@ -6,6 +6,7 @@ import type { DeleteTarget, KindFormState, TagFormState } from "@/components/tag
 
 import Header from "@/components/Header";
 import { DeleteConfirmDialog } from "@/components/tag-management/DeleteConfirmDialog";
+import { ReapplySystemTagsDialog } from "@/components/tag-management/ReapplySystemTagsDialog";
 import { TagDialog } from "@/components/tag-management/TagDialog";
 import { TagKindDialog } from "@/components/tag-management/TagKindDialog";
 import { TagKindSection } from "@/components/tag-management/TagKindSection";
@@ -22,6 +23,7 @@ import {
 	deleteTagMutationOptions,
 	listTagKindsForManagementQueryOptions,
 	listTagsForManagementQueryOptions,
+	reapplySystemTagsMutationOptions,
 	upsertTagKindMutationOptions,
 	upsertTagMutationOptions,
 } from "@/queries/tags";
@@ -62,6 +64,7 @@ function TagsManagementPage() {
 	const deleteTagKindMutation = useMutation(deleteTagKindMutationOptions(queryClient));
 	const upsertTagMutation = useMutation(upsertTagMutationOptions(queryClient));
 	const deleteTagMutation = useMutation(deleteTagMutationOptions(queryClient));
+	const reapplySystemTagsMutation = useMutation(reapplySystemTagsMutationOptions(queryClient));
 
 	const editableKinds = useMemo(
 		() => tagKindsQuery.data.filter((kind) => !kind.systemOnly),
@@ -101,12 +104,14 @@ function TagsManagementPage() {
 		slugManuallyEdited: false,
 	});
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+	const [reapplyDialogOpen, setReapplyDialogOpen] = useState(false);
 
 	const isPending =
 		upsertTagKindMutation.isPending ||
 		deleteTagKindMutation.isPending ||
 		upsertTagMutation.isPending ||
-		deleteTagMutation.isPending;
+		deleteTagMutation.isPending ||
+		reapplySystemTagsMutation.isPending;
 
 	function openCreateKindDialog() {
 		setKindForm({
@@ -223,6 +228,18 @@ function TagsManagementPage() {
 			});
 	}
 
+	function onConfirmReapplySystemTags() {
+		setErrorMessage(null);
+		void reapplySystemTagsMutation
+			.mutateAsync()
+			.then(() => {
+				setReapplyDialogOpen(false);
+			})
+			.catch((error) => {
+				setErrorMessage(toErrorMessage(error));
+			});
+	}
+
 	return (
 		<SidebarInset>
 			<Header showUpload={false} />
@@ -235,6 +252,9 @@ function TagsManagementPage() {
 						</p>
 					</div>
 					<div className="flex items-center gap-2">
+						<Button variant="outline" onClick={() => setReapplyDialogOpen(true)}>
+							Reapply system tags
+						</Button>
 						<Button variant="outline" render={<a href="/" />} nativeButton={false}>
 							Back to gallery
 						</Button>
@@ -299,6 +319,13 @@ function TagsManagementPage() {
 						}
 					}}
 					onConfirmDelete={onConfirmDelete}
+				/>
+
+				<ReapplySystemTagsDialog
+					open={reapplyDialogOpen}
+					isPending={isPending}
+					onOpenChange={setReapplyDialogOpen}
+					onConfirmReapply={onConfirmReapplySystemTags}
 				/>
 			</main>
 		</SidebarInset>

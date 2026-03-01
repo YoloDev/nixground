@@ -5,6 +5,7 @@ import { assertTagName, assertTagSlug } from "@/lib/data-model";
 import {
 	deleteTag,
 	listTagsForManagement,
+	reapplySystemTagsForAllImages,
 	startSession,
 	upsertTag,
 	type TagDefinitionRecord,
@@ -17,6 +18,10 @@ export type UpsertTagInput = {
 
 export type DeleteTagInput = {
 	slug: ReturnType<typeof assertTagSlug>;
+};
+
+export type ReapplySystemTagsResult = {
+	readonly imageCount: number;
 };
 
 const EmptyInput = type("undefined");
@@ -81,4 +86,13 @@ export const deleteTagFn = createServerFn({ method: "POST" })
 		await deleteTag(session, data);
 		await session.commit();
 		return { slug: data.slug };
+	});
+
+export const reapplySystemTagsFn = createServerFn({ method: "POST" })
+	.inputValidator((input: undefined) => parseEmptyInput(input))
+	.handler(async (): Promise<ReapplySystemTagsResult> => {
+		await using session = await startSession("write");
+		const result = await reapplySystemTagsForAllImages(session);
+		await session.commit();
+		return result;
 	});

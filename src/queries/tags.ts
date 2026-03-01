@@ -11,6 +11,7 @@ import {
 import {
 	deleteTagFn,
 	listTagsForManagementFn,
+	reapplySystemTagsFn,
 	upsertTagFn,
 	type DeleteTagInput,
 	type UpsertTagInput,
@@ -85,6 +86,15 @@ export const upsertTagMutationOptions = (queryClient: QueryClient) => {
 export const deleteTagMutationOptions = (queryClient: QueryClient) => {
 	return mutationOptions({
 		mutationFn: (input: DeleteTagInput) => deleteTagFn({ data: input }),
+		onSuccess: async () => {
+			await invalidateTagQueries(queryClient);
+		},
+	});
+};
+
+export const reapplySystemTagsMutationOptions = (queryClient: QueryClient) => {
+	return mutationOptions({
+		mutationFn: () => reapplySystemTagsFn(),
 		onSuccess: async () => {
 			await invalidateTagQueries(queryClient);
 		},

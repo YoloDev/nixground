@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { assertTagKindSlug, assertTagSlug } from "@/lib/data-model";
 
 import { DbSession } from "./client";
-import { setImageTags } from "./image-tags";
+import { reapplySystemTagsForAllImages, setImageTags } from "./image-tags";
 import { getImageBySlug, insertImage, listImagesPage } from "./images";
 import {
 	createTag,
@@ -68,6 +68,31 @@ async function ensureTag(client: Client, tagSlug: string, name: string) {
 	});
 	await client.execute({
 		sql: "INSERT OR IGNORE INTO tags (slug, name, kind_slug, system) VALUES (?, ?, ?, 0)",
+		args: [tagSlug, name, kindSlug],
+	});
+}
+
+async function ensureSystemTag(client: Client, tagSlug: string, name: string) {
+	const [kindSlug] = tagSlug.split("/");
+	await client.execute({
+		sql: `
+INSERT INTO tag_kinds (slug, name, system_only)
+VALUES (?, ?, 1)
+ON CONFLICT(slug) DO UPDATE
+SET name = excluded.name,
+	system_only = 1
+`,
+		args: [kindSlug, kindSlug],
+	});
+	await client.execute({
+		sql: `
+INSERT INTO tags (slug, name, kind_slug, system)
+VALUES (?, ?, ?, 1)
+ON CONFLICT(slug) DO UPDATE
+SET name = excluded.name,
+	kind_slug = excluded.kind_slug,
+	system = 1
+`,
 		args: [tagSlug, name, kindSlug],
 	});
 }
@@ -378,6 +403,90 @@ describe("db/image-tags integration", () => {
 			expect(rows).toEqual([
 				{ image_slug: "img-1", tag_slug: "a/z" },
 				{ image_slug: "img-2", tag_slug: "a/y" },
+			]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"reapplies system tags by adding missing, pruning stale, preserving user tags, and staying idempotent",
+		async () => {
+			const client = await createMigratedClient();
+
+			await ensureSystemTag(client, "resolution/4k", "4K");
+			await ensureSystemTag(client, "aspect-ratio/16-9", "16:9");
+			await ensureSystemTag(client, "aspect-ratio/16-10", "16:10");
+			await ensureTag(client, "motive/nature", "Nature");
+
+			await using writeSession = await createSession(client, "write");
+			await insertImage(writeSession, {
+				slug: "img-1",
+				ext: "jpg",
+				name: "img-1",
+				addedAt: 3,
+				sizeBytes: 1024,
+				widthPx: 3840,
+				heightPx: 2160,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+			await insertImage(writeSession, {
+				slug: "img-2",
+				ext: "jpg",
+				name: "img-2",
+				addedAt: 2,
+				sizeBytes: 1024,
+				widthPx: 2560,
+				heightPx: 1600,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+			await insertImage(writeSession, {
+				slug: "img-3",
+				ext: "jpg",
+				name: "img-3",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 1000,
+				heightPx: 1000,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+
+			await setImageTags(writeSession, {
+				imageSlug: "img-1",
+				tagSlugs: ["motive/nature"],
+			});
+			await setImageTags(writeSession, {
+				imageSlug: "img-2",
+				tagSlugs: ["motive/nature", "resolution/4k"],
+			});
+			await setImageTags(writeSession, {
+				imageSlug: "img-3",
+				tagSlugs: ["motive/nature", "aspect-ratio/16-9"],
+			});
+
+			const firstResult = await reapplySystemTagsForAllImages(writeSession);
+			expect(firstResult.imageCount).toBe(3);
+			const secondResult = await reapplySystemTagsForAllImages(writeSession);
+			expect(secondResult.imageCount).toBe(3);
+			await writeSession.commit();
+
+			const rowsResult = await client.execute(
+				"SELECT image_slug, tag_slug FROM image_tags ORDER BY image_slug ASC, tag_slug ASC",
+			);
+			const rows = rowsResult.rows.map((row) => ({
+				image_slug: getString(row, "image_slug"),
+				tag_slug: getString(row, "tag_slug"),
+			}));
+
+			expect(rows).toEqual([
+				{ image_slug: "img-1", tag_slug: "aspect-ratio/16-9" },
+				{ image_slug: "img-1", tag_slug: "motive/nature" },
+				{ image_slug: "img-1", tag_slug: "resolution/4k" },
+				{ image_slug: "img-2", tag_slug: "aspect-ratio/16-10" },
+				{ image_slug: "img-2", tag_slug: "motive/nature" },
+				{ image_slug: "img-3", tag_slug: "motive/nature" },
 			]);
 		},
 		INTEGRATION_TIMEOUT_MS,
