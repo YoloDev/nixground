@@ -37,6 +37,11 @@ type InsertImageInput = {
 	readonly ready?: boolean;
 };
 
+type UpdateImageNameInput = {
+	readonly slug: string;
+	readonly name: string;
+};
+
 type GetImageBySlugOptions = {
 	readonly includeNotReady?: boolean;
 };
@@ -255,6 +260,25 @@ export async function markImageReady(session: DbExecutor, slugInput: string) {
 		sql: "UPDATE images SET ready = 1 WHERE slug = ?",
 		args: [slug],
 	});
+}
+
+export async function updateImageName(session: DbExecutor, input: UpdateImageNameInput) {
+	const slug = assertValidImageSlug(input.slug);
+	const name = assertImageName(input.name);
+
+	const result = await session.execute({
+		sql: "UPDATE images SET name = ? WHERE slug = ?",
+		args: [name, slug],
+	});
+
+	if (Number(result.rowsAffected) === 0) {
+		throw new Error(`Image not found: ${slug}`);
+	}
+
+	return {
+		slug,
+		name,
+	};
 }
 
 export async function deleteImageBySlug(session: DbExecutor, slugInput: string) {

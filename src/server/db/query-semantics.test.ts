@@ -7,8 +7,8 @@ import { join } from "node:path";
 import { assertTagKindSlug, assertTagSlug } from "@/lib/data-model";
 
 import { DbSession } from "./client";
-import { reapplySystemTagsForAllImages, setImageTags } from "./image-tags";
-import { getImageBySlug, insertImage, listImagesPage } from "./images";
+import { reapplySystemTagsForAllImages, setImageTags, setImageUserTags } from "./image-tags";
+import { getImageBySlug, insertImage, listImagesPage, updateImageName } from "./images";
 import {
 	createTag,
 	createTagKind,
@@ -348,6 +348,49 @@ describe("db/images integration", () => {
 		},
 		INTEGRATION_TIMEOUT_MS,
 	);
+
+	it(
+		"updates image name and rejects missing images",
+		async () => {
+			const client = await createMigratedClient();
+
+			await using writeSession = await createSession(client, "write");
+			await insertImage(writeSession, {
+				slug: "rename-me",
+				ext: "jpg",
+				name: "Old name",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 1200,
+				heightPx: 800,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+
+			const updated = await updateImageName(writeSession, {
+				slug: "rename-me",
+				name: "New name",
+			});
+			expect(String(updated.name)).toBe("New name");
+
+			await expectRejectsWithMessage(
+				updateImageName(writeSession, {
+					slug: "missing",
+					name: "No image",
+				}),
+				"Image not found: missing",
+			);
+
+			await writeSession.commit();
+
+			const renamed = await client.execute({
+				sql: "SELECT name FROM images WHERE slug = ?",
+				args: ["rename-me"],
+			});
+			expect(getString(renamed.rows[0], "name")).toBe("New name");
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
 });
 
 describe("db/image-tags integration", () => {
@@ -488,6 +531,93 @@ describe("db/image-tags integration", () => {
 				{ image_slug: "img-2", tag_slug: "motive/nature" },
 				{ image_slug: "img-3", tag_slug: "motive/nature" },
 			]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"replaces only user tags and preserves existing system tag assignments",
+		async () => {
+			const client = await createMigratedClient();
+
+			await ensureSystemTag(client, "resolution/4k", "4K");
+			await ensureSystemTag(client, "aspect-ratio/16-9", "16:9");
+			await ensureTag(client, "motive/nature", "Nature");
+			await ensureTag(client, "subject/portrait", "Portrait");
+
+			await using session = await createSession(client, "write");
+			await insertImage(session, {
+				slug: "img-user-tags",
+				ext: "jpg",
+				name: "img-user-tags",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 3840,
+				heightPx: 2160,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+
+			await setImageTags(session, {
+				imageSlug: "img-user-tags",
+				tagSlugs: ["resolution/4k", "aspect-ratio/16-9", "motive/nature"],
+			});
+
+			await setImageUserTags(session, {
+				imageSlug: "img-user-tags",
+				tagSlugs: ["subject/portrait"],
+			});
+			await session.commit();
+
+			const rowsResult = await client.execute({
+				sql: "SELECT tag_slug FROM image_tags WHERE image_slug = ? ORDER BY tag_slug ASC",
+				args: ["img-user-tags"],
+			});
+			expect(rowsResult.rows.map((row) => getString(row, "tag_slug"))).toEqual([
+				"aspect-ratio/16-9",
+				"resolution/4k",
+				"subject/portrait",
+			]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"rejects assigning system tags and missing tags through setImageUserTags",
+		async () => {
+			const client = await createMigratedClient();
+
+			await ensureSystemTag(client, "resolution/4k", "4K");
+			await ensureTag(client, "motive/nature", "Nature");
+
+			await using session = await createSession(client, "write");
+			await insertImage(session, {
+				slug: "img-rejects",
+				ext: "jpg",
+				name: "img-rejects",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 1200,
+				heightPx: 800,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+
+			await expectRejectsWithMessage(
+				setImageUserTags(session, {
+					imageSlug: "img-rejects",
+					tagSlugs: ["resolution/4k"],
+				}),
+				"System tag cannot be assigned manually: resolution/4k",
+			);
+
+			await expectRejectsWithMessage(
+				setImageUserTags(session, {
+					imageSlug: "img-rejects",
+					tagSlugs: ["motive/missing"],
+				}),
+				"Tag not found: motive/missing",
+			);
 		},
 		INTEGRATION_TIMEOUT_MS,
 	);

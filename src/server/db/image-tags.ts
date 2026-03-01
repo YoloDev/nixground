@@ -9,6 +9,11 @@ type SetImageTagsInput = {
 	readonly tagSlugs: readonly string[];
 };
 
+type SetImageUserTagsInput = {
+	readonly imageSlug: string;
+	readonly tagSlugs: readonly string[];
+};
+
 type ReapplySystemTagsResult = {
 	readonly imageCount: number;
 };
@@ -28,6 +33,74 @@ export async function setImageTags(session: DbExecutor, input: SetImageTagsInput
 			args: [imageSlug, tagSlug],
 		});
 	}
+}
+
+export async function setImageUserTags(session: DbExecutor, input: SetImageUserTagsInput) {
+	const imageSlug = assertValidImageSlug(input.imageSlug);
+	const requestedTagSlugs = [...new Set(input.tagSlugs.map(assertTagSlug))];
+
+	const imageExistsResult = await session.execute({
+		sql: "SELECT 1 AS found FROM images WHERE slug = ? LIMIT 1",
+		args: [imageSlug],
+	});
+
+	if (imageExistsResult.rows.length === 0) {
+		throw new Error(`Image not found: ${imageSlug}`);
+	}
+
+	if (requestedTagSlugs.length > 0) {
+		const placeholders = requestedTagSlugs.map(() => "?").join(", ");
+		const tagRows = await session.execute({
+			sql: `
+SELECT slug, system
+FROM tags
+WHERE slug IN (${placeholders})
+`,
+			args: requestedTagSlugs,
+		});
+
+		const tagBySlug = new Map(
+			tagRows.rows.map((row) => {
+				const record = row as Record<string, unknown>;
+				return [assertTagSlug(String(record.slug)), Number(record.system)];
+			}),
+		);
+
+		for (const tagSlug of requestedTagSlugs) {
+			const systemValue = tagBySlug.get(tagSlug);
+			if (typeof systemValue === "undefined") {
+				throw new Error(`Tag not found: ${tagSlug}`);
+			}
+			if (systemValue === 1) {
+				throw new Error(`System tag cannot be assigned manually: ${tagSlug}`);
+			}
+		}
+	}
+
+	await session.execute({
+		sql: `
+DELETE FROM image_tags
+WHERE image_slug = ?
+AND tag_slug IN (
+	SELECT slug
+	FROM tags
+	WHERE system = 0
+)
+`,
+		args: [imageSlug],
+	});
+
+	for (const tagSlug of requestedTagSlugs) {
+		await session.execute({
+			sql: "INSERT INTO image_tags (image_slug, tag_slug) VALUES (?, ?)",
+			args: [imageSlug, tagSlug],
+		});
+	}
+
+	return {
+		imageSlug,
+		tagCount: requestedTagSlugs.length,
+	};
 }
 
 export async function reapplySystemTagsForAllImages(

@@ -6,6 +6,7 @@ export {
 	insertImage,
 	listImagesPage,
 	markImageReady,
+	updateImageName,
 } from "./images";
 export {
 	deleteTag,
@@ -17,7 +18,7 @@ export {
 	upsertTag,
 	upsertTagKind,
 } from "./tags";
-export { reapplySystemTagsForAllImages, setImageTags } from "./image-tags";
+export { reapplySystemTagsForAllImages, setImageTags, setImageUserTags } from "./image-tags";
 export type {
 	ImageCursor,
 	ImageRecord,
