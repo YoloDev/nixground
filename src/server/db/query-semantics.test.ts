@@ -491,6 +491,117 @@ describe("db/image-tags integration", () => {
 		},
 		INTEGRATION_TIMEOUT_MS,
 	);
+
+	it(
+		"fails loudly when a computed system tag is missing from tag definitions",
+		async () => {
+			const client = await createMigratedClient();
+
+			await ensureSystemTag(client, "resolution/4k", "4K");
+
+			await using session = await createSession(client, "write");
+			await insertImage(session, {
+				slug: "img-missing-tag",
+				ext: "jpg",
+				name: "img-missing-tag",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 3840,
+				heightPx: 2160,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+
+			await session.execute({
+				sql: "DELETE FROM tags WHERE slug = ?",
+				args: ["aspect-ratio/16-9"],
+			});
+
+			await expectRejectsWithMessage(
+				reapplySystemTagsForAllImages(session),
+				"Missing system tag definition",
+			);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"reapply never deletes system tag definitions from tags table",
+		async () => {
+			const client = await createMigratedClient();
+
+			await ensureSystemTag(client, "resolution/4k", "4K");
+			await ensureSystemTag(client, "aspect-ratio/16-9", "16:9");
+			await ensureSystemTag(client, "aspect-ratio/16-10", "16:10");
+
+			await using session = await createSession(client, "write");
+			await insertImage(session, {
+				slug: "img-tags-preserved",
+				ext: "jpg",
+				name: "img-tags-preserved",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 3840,
+				heightPx: 2400,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+
+			await reapplySystemTagsForAllImages(session);
+			await session.commit();
+
+			const systemTagRows = await client.execute(
+				"SELECT slug FROM tags WHERE system = 1 ORDER BY slug ASC",
+			);
+			const systemTagSlugs = systemTagRows.rows.map((row) => getString(row, "slug"));
+
+			expect(systemTagSlugs).toEqual(["aspect-ratio/16-10", "aspect-ratio/16-9", "resolution/4k"]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"applies newly introduced system tags to existing images when reapply runs",
+		async () => {
+			const client = await createMigratedClient();
+
+			await ensureSystemTag(client, "resolution/4k", "4K");
+			await ensureSystemTag(client, "aspect-ratio/16-9", "16:9");
+
+			await using writeSession = await createSession(client, "write");
+			await insertImage(writeSession, {
+				slug: "img-new-system-tag",
+				ext: "jpg",
+				name: "img-new-system-tag",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 2560,
+				heightPx: 1600,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+			await reapplySystemTagsForAllImages(writeSession);
+			await writeSession.commit();
+
+			await ensureSystemTag(client, "aspect-ratio/16-10", "16:10");
+
+			await using reapplySession = await createSession(client, "write");
+			await reapplySystemTagsForAllImages(reapplySession);
+			await reapplySession.commit();
+
+			const rowsResult = await client.execute(
+				"SELECT image_slug, tag_slug FROM image_tags WHERE image_slug = ? ORDER BY tag_slug ASC",
+				["img-new-system-tag"],
+			);
+			const rows = rowsResult.rows.map((row) => ({
+				image_slug: getString(row, "image_slug"),
+				tag_slug: getString(row, "tag_slug"),
+			}));
+
+			expect(rows).toEqual([{ image_slug: "img-new-system-tag", tag_slug: "aspect-ratio/16-10" }]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
 });
 
 describe("db/tags integration", () => {

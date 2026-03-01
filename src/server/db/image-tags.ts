@@ -33,6 +33,11 @@ export async function setImageTags(session: DbExecutor, input: SetImageTagsInput
 export async function reapplySystemTagsForAllImages(
 	session: DbExecutor,
 ): Promise<ReapplySystemTagsResult> {
+	const systemTagRows = await session.execute("SELECT slug FROM tags WHERE system = 1");
+	const availableSystemTagSlugs = new Set(
+		systemTagRows.rows.map((row) => assertTagSlug(String((row as Record<string, unknown>).slug))),
+	);
+
 	const imageRows = await session.execute(`
 SELECT
 	slug,
@@ -60,9 +65,15 @@ WHERE tag_slug IN (
 		});
 
 		for (const tagSlug of expectedSystemTagSlugs) {
+			const expectedTagSlug = assertTagSlug(tagSlug);
+
+			if (!availableSystemTagSlugs.has(expectedTagSlug)) {
+				throw new Error(`Missing system tag definition: ${expectedTagSlug}`);
+			}
+
 			await session.execute({
 				sql: "INSERT INTO image_tags (image_slug, tag_slug) VALUES (?, ?)",
-				args: [imageSlug, tagSlug],
+				args: [imageSlug, expectedTagSlug],
 			});
 		}
 	}
