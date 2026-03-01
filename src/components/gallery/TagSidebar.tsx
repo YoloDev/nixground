@@ -10,6 +10,7 @@ import {
 	SidebarHeader,
 	SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { getTagKindColor } from "@/lib/tag-kind-color";
 import { cn } from "@/lib/utils";
 
 type TagSidebarProps = {
@@ -44,7 +45,10 @@ export function TagSidebar({ tagKinds, onTagToggle }: TagSidebarProps) {
 					tagKinds.map((kind) => (
 						<SidebarGroup key={kind.slug}>
 							<div className="flex items-center justify-between gap-2">
-								<SidebarGroupLabel className="h-auto p-0 text-sm font-medium text-foreground">
+								<SidebarGroupLabel
+									className="h-auto p-0 text-sm font-medium text-foreground"
+									style={{ color: getTagKindColor(String(kind.slug), 0.7) }}
+								>
 									{kind.name}
 								</SidebarGroupLabel>
 								<span className="text-muted-foreground text-xs">
@@ -67,6 +71,11 @@ export function TagSidebar({ tagKinds, onTagToggle }: TagSidebarProps) {
 														? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
 														: "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
 												)}
+												style={
+													tag.selected
+														? { backgroundColor: getTagKindColor(String(kind.slug), 0.7) }
+														: undefined
+												}
 												data-selected={tag.selected ? "true" : undefined}
 											>
 												<span className="truncate">{tag.name}</span>

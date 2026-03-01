@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useDebounced } from "@/hooks/use-debounced";
+import { getTagKindColor } from "@/lib/tag-kind-color";
 import { cn } from "@/lib/utils";
 
 import { ImageMetadataDialog } from "./ImageMetadataDialog";
@@ -218,6 +219,7 @@ function ImageCard({ image, onEdit, selected, onToggleSelected }: ImageCardProps
 									key={tag.slug}
 									variant="secondary"
 									className="shrink-0 bg-black/65 text-[11px] text-white backdrop-blur-sm"
+									style={{ backgroundColor: getTagKindColor(String(tag.kindSlug), 0.3, "65%") }}
 								>
 									{tag.name}
 								</Badge>
@@ -230,7 +232,8 @@ function ImageCard({ image, onEdit, selected, onToggleSelected }: ImageCardProps
 								<Badge
 									key={tag.slug}
 									variant="secondary"
-									className="bg-black/45 text-[11px] text-white backdrop-blur-sm"
+									className="bg-black/65 text-[11px] text-white backdrop-blur-sm"
+									style={{ backgroundColor: getTagKindColor(String(tag.kindSlug), 0.3, "65%") }}
 								>
 									{tag.name}
 								</Badge>
