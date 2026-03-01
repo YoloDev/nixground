@@ -40,7 +40,7 @@
 - For the NixGround GitHub Project backlog view, list project items with the query `type:feature`.
 - When checking what's next, start by looking at in-progress features. If there are no in-progress features, then check the backlog.
 - Work on individual tasks one at a time, not the whole feature. Use sub-issue sorting for priority. Only use the feature for context. Once all tasks are complete, the feature can be closed, with approval of the user.
-- When finishing a task, suggest to the user to commit the changes with a message that includes a reference to the completed task.
+- When finishing a task, suggest to the user to commit the changes with a message that includes a reference to the completed task. The commit message should include the header `Resolves: #<issue_number>`, such that the issue is automatically closed when the commit is pushed.
 - Before closing an issue, make sure code is committed and pushed.
 - Do not manually move project items to `Done`; closing the linked issue updates project status automatically.
 - Before moving on to the next task, make sure the current task is complete and the corresponding issue is closed.
