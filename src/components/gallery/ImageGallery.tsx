@@ -15,6 +15,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { ListImagesItem } from "@/api/list-images";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useDebounced } from "@/hooks/use-debounced";
@@ -179,6 +180,9 @@ type ImageCardProps = {
 };
 
 function ImageCard({ image, onEdit, selected, onToggleSelected }: ImageCardProps) {
+	const systemTags = image.tags.filter((tag) => tag.system);
+	const userTags = image.tags.filter((tag) => !tag.system);
+
 	return (
 		<figure className="bg-card group relative overflow-hidden rounded-xl border @container">
 			<Button
@@ -205,6 +209,36 @@ function ImageCard({ image, onEdit, selected, onToggleSelected }: ImageCardProps
 				decoding="async"
 				className="block h-auto w-full"
 			/>
+			{systemTags.length > 0 || userTags.length > 0 ? (
+				<div className="pointer-events-none absolute top-2 right-2 z-10 max-w-[70%] space-y-1 text-right">
+					{systemTags.length > 0 ? (
+						<div className="flex flex-nowrap justify-end gap-1 overflow-hidden">
+							{systemTags.map((tag) => (
+								<Badge
+									key={tag.slug}
+									variant="secondary"
+									className="shrink-0 bg-black/65 text-[11px] text-white backdrop-blur-sm"
+								>
+									{tag.name}
+								</Badge>
+							))}
+						</div>
+					) : null}
+					{userTags.length > 0 ? (
+						<div className="flex flex-col items-end gap-1">
+							{userTags.map((tag) => (
+								<Badge
+									key={tag.slug}
+									variant="secondary"
+									className="bg-black/45 text-[11px] text-white backdrop-blur-sm"
+								>
+									{tag.name}
+								</Badge>
+							))}
+						</div>
+					) : null}
+				</div>
+			) : null}
 			<figcaption className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/70 px-3 py-2 text-xs text-white opacity-0 backdrop-brightness-50 transition-opacity duration-200 group-hover:opacity-100">
 				<Button
 					variant="secondary"
