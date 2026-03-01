@@ -11,7 +11,7 @@ import {
 } from "@/lib/data-model";
 import { assertValidImageSlug, normalizeImageExt } from "@/lib/image-keys";
 
-import type { ImageRecord, TagRecord } from "./types";
+import type { ImageListTagRecord, ImageRecord, TagRecord } from "./types";
 
 type Row = Record<string, unknown>;
 
@@ -53,5 +53,14 @@ export function mapTagRow(row: Row, selected: ReadonlySet<string>): TagRecord {
 		system: asNumber(row.system, "system") === 1,
 		imageCount: asNumber(row.image_count, "image_count"),
 		selected: selected.has(slug),
+	};
+}
+
+export function mapImageListTagRow(row: Row): ImageListTagRecord {
+	return {
+		slug: assertTagSlug(asString(row.tag_slug, "tag_slug")),
+		name: assertTagName(asString(row.tag_name, "tag_name")),
+		kindSlug: assertTagKindSlug(asString(row.kind_slug, "kind_slug")),
+		system: asNumber(row.system, "system") === 1,
 	};
 }

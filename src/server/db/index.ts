@@ -21,6 +21,8 @@ export {
 export { reapplySystemTagsForAllImages, setImageTags, setImageUserTags } from "./image-tags";
 export type {
 	ImageCursor,
+	ImageListRecord,
+	ImageListTagRecord,
 	ImageRecord,
 	ImageWithMeta,
 	TagDefinitionRecord,

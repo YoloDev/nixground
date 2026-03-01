@@ -14,9 +14,9 @@ import {
 import { assertValidImageSlug, normalizeImageExt } from "@/lib/image-keys";
 
 import type { DbExecutor } from "./client";
-import type { ImageCursor, ImageRecord, ImageWithMeta } from "./types";
+import type { ImageCursor, ImageListRecord, ImageRecord, ImageWithMeta } from "./types";
 
-import { mapImageRow, mapTagRow } from "./rows";
+import { mapImageListTagRow, mapImageRow, mapTagRow } from "./rows";
 
 type ListImagesPageInput = {
 	readonly cursor?: ImageCursor;
@@ -151,7 +151,48 @@ LIMIT ?
 		args: [...args, limit + 1],
 	});
 
-	const items = result.rows.slice(0, limit).map((row: Record<string, unknown>) => mapImageRow(row));
+	const images = result.rows
+		.slice(0, limit)
+		.map((row: Record<string, unknown>) => mapImageRow(row));
+	const imageSlugs = images.map((image) => image.slug);
+
+	const tagsByImageSlug = new Map<string, ImageListRecord["tags"]>();
+
+	if (imageSlugs.length > 0) {
+		const placeholders = imageSlugs.map(() => "?").join(", ");
+		const tagsResult = await session.execute({
+			sql: `
+SELECT
+	it.image_slug,
+	t.slug AS tag_slug,
+	t.name AS tag_name,
+	t.kind_slug,
+	t.system
+FROM image_tags it
+INNER JOIN tags t ON t.slug = it.tag_slug
+WHERE it.image_slug IN (${placeholders})
+ORDER BY it.image_slug ASC, t.kind_slug ASC, t.slug ASC
+`,
+			args: imageSlugs,
+		});
+
+		for (const row of tagsResult.rows) {
+			const imageSlugRaw = row.image_slug;
+			if (typeof imageSlugRaw !== "string") {
+				throw new Error("Expected string row field: image_slug");
+			}
+
+			const imageSlug = assertValidImageSlug(imageSlugRaw);
+			const tags = tagsByImageSlug.get(imageSlug) ?? [];
+			tags.push(mapImageListTagRow(row));
+			tagsByImageSlug.set(imageSlug, tags);
+		}
+	}
+
+	const items: ImageListRecord[] = images.map((image) => ({
+		...image,
+		tags: tagsByImageSlug.get(image.slug) ?? [],
+	}));
 	const hasNextPage = result.rows.length > limit;
 	const last = items.at(-1);
 

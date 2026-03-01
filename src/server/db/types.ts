@@ -53,3 +53,14 @@ export type ImageWithMeta = {
 	image: ImageRecord;
 	tags: TagRecord[];
 };
+
+export type ImageListTagRecord = {
+	slug: TagSlug;
+	name: string;
+	kindSlug: TagKindSlug;
+	system: boolean;
+};
+
+export type ImageListRecord = ImageRecord & {
+	tags: ImageListTagRecord[];
+};

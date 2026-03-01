@@ -9,6 +9,12 @@ import {
 import type { ImageCursor } from "@/server/db";
 
 import { listImagesPageFn, type ListImagesResponse } from "@/api/list-images";
+import {
+	setImageUserTagsFn,
+	type SetImageUserTagsInput,
+	updateImageNameFn,
+	type UpdateImageNameInput,
+} from "@/api/manage-image-metadata";
 import { uploadImageFn } from "@/api/upload-image";
 
 const initialPageParam: ImageCursor | undefined = undefined;
@@ -36,7 +42,42 @@ export const uploadImageMutationOptions = (queryClient: QueryClient) => {
 	});
 };
 
+async function invalidateImageAndTagQueries(queryClient: QueryClient) {
+	await Promise.all([
+		queryClient.invalidateQueries({ queryKey: ["images"] }),
+		queryClient.invalidateQueries({ queryKey: ["tags"] }),
+	]);
+}
+
+export const updateImageNameMutationOptions = (queryClient: QueryClient) => {
+	return mutationOptions({
+		mutationFn: (input: UpdateImageNameInput) => updateImageNameFn({ data: input }),
+		onSuccess: async () => {
+			await invalidateImageAndTagQueries(queryClient);
+		},
+	});
+};
+
+export const setImageUserTagsMutationOptions = (queryClient: QueryClient) => {
+	return mutationOptions({
+		mutationFn: (input: SetImageUserTagsInput) => setImageUserTagsFn({ data: input }),
+		onSuccess: async () => {
+			await invalidateImageAndTagQueries(queryClient);
+		},
+	});
+};
+
 export const useUploadImageMutation = () => {
 	const queryClient = useQueryClient();
 	return useMutation(uploadImageMutationOptions(queryClient));
+};
+
+export const useUpdateImageNameMutation = () => {
+	const queryClient = useQueryClient();
+	return useMutation(updateImageNameMutationOptions(queryClient));
+};
+
+export const useSetImageUserTagsMutation = () => {
+	const queryClient = useQueryClient();
+	return useMutation(setImageUserTagsMutationOptions(queryClient));
 };

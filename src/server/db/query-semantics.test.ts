@@ -111,6 +111,48 @@ async function expectRejectsWithMessage(promise: Promise<unknown>, expectedMessa
 
 describe("db/images integration", () => {
 	it(
+		"includes single sorted tag list per listed image",
+		async () => {
+			const client = await createMigratedClient();
+
+			await ensureTag(client, "motive/nature", "Nature");
+			await ensureSystemTag(client, "resolution/4k", "4K");
+			await ensureSystemTag(client, "aspect-ratio/16-9", "16:9");
+
+			await using session = await createSession(client, "write");
+			await insertImage(session, {
+				slug: "sorted-tags",
+				ext: "jpg",
+				name: "sorted-tags",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 3840,
+				heightPx: 2160,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+
+			await setImageTags(session, {
+				imageSlug: "sorted-tags",
+				tagSlugs: ["motive/nature", "resolution/4k", "aspect-ratio/16-9"],
+			});
+			await session.commit();
+
+			await using readSession = await createSession(client, "read");
+			const page = await listImagesPage(readSession, { limit: 10 });
+
+			expect(page.items).toHaveLength(1);
+			expect(page.items[0]?.tags.map((tag) => String(tag.slug))).toEqual([
+				"aspect-ratio/16-9",
+				"motive/nature",
+				"resolution/4k",
+			]);
+			expect(page.items[0]?.tags.map((tag) => tag.system)).toEqual([true, false, true]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
 		"applies AND semantics across selected tags and defaults to ready images",
 		async () => {
 			const client = await createMigratedClient();

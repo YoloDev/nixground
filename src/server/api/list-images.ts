@@ -3,7 +3,7 @@ import { type } from "arktype";
 
 import { assertTagKindSlug, assertTagSlug, assertUnixSeconds } from "@/lib/data-model";
 import { assertValidImageSlug } from "@/lib/image-keys";
-import { listImagesPage, startSession, type ImageCursor, type ImageRecord } from "@/server/db";
+import { listImagesPage, startSession, type ImageCursor, type ImageListRecord } from "@/server/db";
 import { getPublicImageUrlForImage } from "@/server/r2";
 
 export type ListImagesInput = {
@@ -12,7 +12,7 @@ export type ListImagesInput = {
 	readonly groupedTagSlugs?: Readonly<Record<string, readonly string[]>>;
 };
 
-export type ListImagesItem = ImageRecord & {
+export type ListImagesItem = ImageListRecord & {
 	readonly url: string;
 };
 
@@ -89,7 +89,7 @@ function assertGroupedTagSlugs(
 }
 
 function toListImagesResponse(page: {
-	readonly items: readonly ImageRecord[];
+	readonly items: readonly ImageListRecord[];
 	readonly nextCursor: ImageCursor | null;
 }): ListImagesResponse {
 	return {

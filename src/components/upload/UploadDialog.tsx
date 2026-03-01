@@ -1,9 +1,8 @@
 "use client";
 
-import { IconX } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
+import { UserTagsSelector } from "@/components/gallery/UserTagsSelector";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -12,26 +11,11 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Combobox,
-	ComboboxContent,
-	ComboboxEmpty,
-	ComboboxInput,
-	ComboboxItem,
-	ComboboxList,
-} from "@/components/ui/combobox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUploadImageMutation } from "@/queries/images";
-import { listAssignableTagsQueryOptions } from "@/queries/tags";
-
-type TagOption = {
-	readonly slug: string;
-	readonly name: string;
-};
 
 type UploadDialogProps = {
 	readonly open: boolean;
@@ -67,14 +51,9 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 	const [slugWasManuallyEdited, setSlugWasManuallyEdited] = useState(false);
 	const [url, setUrl] = useState("");
 	const [file, setFile] = useState<File | null>(null);
-	const [selectedTags, setSelectedTags] = useState<TagOption[]>([]);
+	const [selectedTagSlugs, setSelectedTagSlugs] = useState<Set<string>>(new Set<string>());
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-	const assignableTagQuery = useQuery({
-		...listAssignableTagsQueryOptions(),
-		enabled: open,
-	});
 
 	const uploadImage = useUploadImageMutation();
 
@@ -86,8 +65,6 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 			}
 		}
 	}, [name, slug, slugWasManuallyEdited]);
-
-	const selectedTagSlugs = useMemo(() => selectedTags.map((tag) => tag.slug), [selectedTags]);
 
 	function onFileSelected(nextFile: File | null) {
 		setFile(nextFile);
@@ -107,7 +84,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 		setSlugWasManuallyEdited(false);
 		setUrl("");
 		setFile(null);
-		setSelectedTags([]);
+		setSelectedTagSlugs(new Set<string>());
 		setErrorMessage(null);
 	}
 
@@ -268,44 +245,14 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 
 						<Field>
 							<FieldLabel htmlFor="upload-tags">Tags</FieldLabel>
-							<Combobox
-								items={assignableTagQuery.data ?? []}
-								multiple
-								value={selectedTags}
-								onValueChange={(value) => setSelectedTags(value)}
-							>
-								<ComboboxInput id="upload-tags" placeholder="Search and select tags" showClear />
-								<ComboboxContent>
-									<ComboboxEmpty>No tags found.</ComboboxEmpty>
-									<ComboboxList>
-										{(item: TagOption) => (
-											<ComboboxItem key={item.slug} value={item}>
-												{item.slug}
-											</ComboboxItem>
-										)}
-									</ComboboxList>
-								</ComboboxContent>
-							</Combobox>
-
-							{selectedTags.length > 0 && (
-								<div className="flex flex-wrap gap-2">
-									{selectedTags.map((tag) => (
-										<Badge key={tag.slug} variant="secondary" className="gap-1 pr-1">
-											{tag.slug}
-											<button
-												type="button"
-												onClick={() =>
-													setSelectedTags((prev) => prev.filter((item) => item.slug !== tag.slug))
-												}
-												aria-label={`Remove ${tag.slug}`}
-												className="hover:text-foreground text-muted-foreground inline-flex size-4 items-center justify-center"
-											>
-												<IconX className="size-3" />
-											</button>
-										</Badge>
-									))}
-								</div>
-							)}
+							<UserTagsSelector
+								open={open}
+								disabled={isSubmitting}
+								selectedTagSlugs={selectedTagSlugs}
+								onSelectedTagSlugsChange={setSelectedTagSlugs}
+								inputId="upload-tags"
+								placeholder="Search and select tags"
+							/>
 						</Field>
 					</FieldGroup>
 

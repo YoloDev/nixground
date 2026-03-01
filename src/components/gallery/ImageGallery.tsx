@@ -1,4 +1,5 @@
 import { useWindowSize } from "@react-hook/window-size";
+import { IconPencil } from "@tabler/icons-react";
 import { ClientOnly } from "@tanstack/react-router";
 import {
 	useContainerPosition,
@@ -10,12 +11,15 @@ import {
 	type MasonryScrollerProps,
 	type Positioner,
 } from "masonic";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { ListImagesItem } from "@/api/list-images";
 
+import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useDebounced } from "@/hooks/use-debounced";
+
+import { ImageMetadataDialog } from "./ImageMetadataDialog";
 
 type ImageGalleryProps = {
 	readonly images: ListImagesItem[];
@@ -28,6 +32,14 @@ export function shouldRequestNextPage(stopIndex: number, itemCount: number) {
 }
 
 export function ImageGallery({ images, fetchMore, cacheKey }: ImageGalleryProps) {
+	const [isEditorOpen, setIsEditorOpen] = useState(false);
+	const [editingImageSlug, setEditingImageSlug] = useState<string | null>(null);
+
+	const selectedImage = useMemo(
+		() => images.find((image) => image.slug === editingImageSlug) ?? null,
+		[images, editingImageSlug],
+	);
+
 	const maybeLoadMore = useCallback(
 		(_startIndex: number, stopIndex: number, currentItems: ListImagesItem[]) => {
 			if (!shouldRequestNextPage(stopIndex, currentItems.length)) {
@@ -43,6 +55,18 @@ export function ImageGallery({ images, fetchMore, cacheKey }: ImageGalleryProps)
 		return null;
 	}
 
+	const onEditImage = (imageSlug: string) => {
+		setEditingImageSlug(imageSlug);
+		setIsEditorOpen(true);
+	};
+
+	const onOpenChange = (open: boolean) => {
+		setIsEditorOpen(open);
+		if (!open) {
+			setEditingImageSlug(null);
+		}
+	};
+
 	return (
 		<section aria-label="Image gallery">
 			<ClientOnly>
@@ -53,11 +77,15 @@ export function ImageGallery({ images, fetchMore, cacheKey }: ImageGalleryProps)
 					columnGutter={16}
 					items={images}
 					itemKey={(item) => item.slug}
-					render={({ data }) => <ImageCard key={data.slug} image={data} />}
+					render={({ data }) => (
+						<ImageCard key={data.slug} image={data} onEdit={() => onEditImage(String(data.slug))} />
+					)}
 					itemHeightEstimate={400}
 					columnWidth={500}
 				/>
 			</ClientOnly>
+
+			<ImageMetadataDialog open={isEditorOpen} image={selectedImage} onOpenChange={onOpenChange} />
 		</section>
 	);
 }
@@ -130,9 +158,10 @@ function MasonryScroller<Item>(props: MasonryScrollerProps<Item>) {
 
 type ImageCardProps = {
 	readonly image: ListImagesItem;
+	readonly onEdit: () => void;
 };
 
-function ImageCard({ image }: ImageCardProps) {
+function ImageCard({ image, onEdit }: ImageCardProps) {
 	return (
 		<figure className="bg-card group relative overflow-hidden rounded-xl border @container">
 			<img
@@ -144,8 +173,22 @@ function ImageCard({ image }: ImageCardProps) {
 				decoding="async"
 				className="block h-auto w-full"
 			/>
-			<figcaption className="absolute inset-x-0 bottom-0 truncate bg-black/70 px-3 py-2 text-xs text-white opacity-0 backdrop-brightness-50 transition-opacity duration-200 group-hover:opacity-100">
-				{image.name} · {image.widthPx}x{image.heightPx}
+			<figcaption className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/70 px-3 py-2 text-xs text-white opacity-0 backdrop-brightness-50 transition-opacity duration-200 group-hover:opacity-100">
+				<Button
+					variant="secondary"
+					size="icon-sm"
+					className="shrink-0"
+					onClick={(event) => {
+						event.stopPropagation();
+						onEdit();
+					}}
+				>
+					<IconPencil />
+					<span className="sr-only">Edit image metadata</span>
+				</Button>
+				<span className="truncate">
+					{image.name} · {image.widthPx}x{image.heightPx}
+				</span>
 			</figcaption>
 		</figure>
 	);
