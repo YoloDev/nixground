@@ -1,5 +1,5 @@
 import { useWindowSize } from "@react-hook/window-size";
-import { IconPencil } from "@tabler/icons-react";
+import { IconCheck, IconPencil } from "@tabler/icons-react";
 import { ClientOnly } from "@tanstack/react-router";
 import {
 	useContainerPosition,
@@ -18,6 +18,7 @@ import type { ListImagesItem } from "@/api/list-images";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useDebounced } from "@/hooks/use-debounced";
+import { cn } from "@/lib/utils";
 
 import { ImageMetadataDialog } from "./ImageMetadataDialog";
 
@@ -25,13 +26,21 @@ type ImageGalleryProps = {
 	readonly images: ListImagesItem[];
 	readonly fetchMore: () => void;
 	readonly cacheKey: string;
+	readonly selectedImageSlugs: ReadonlySet<string>;
+	readonly onToggleSelectedImageSlug: (imageSlug: string) => void;
 };
 
 export function shouldRequestNextPage(stopIndex: number, itemCount: number) {
 	return stopIndex > itemCount - 4;
 }
 
-export function ImageGallery({ images, fetchMore, cacheKey }: ImageGalleryProps) {
+export function ImageGallery({
+	images,
+	fetchMore,
+	cacheKey,
+	selectedImageSlugs,
+	onToggleSelectedImageSlug,
+}: ImageGalleryProps) {
 	const [isEditorOpen, setIsEditorOpen] = useState(false);
 	const [editingImageSlug, setEditingImageSlug] = useState<string | null>(null);
 
@@ -78,7 +87,13 @@ export function ImageGallery({ images, fetchMore, cacheKey }: ImageGalleryProps)
 					items={images}
 					itemKey={(item) => item.slug}
 					render={({ data }) => (
-						<ImageCard key={data.slug} image={data} onEdit={() => onEditImage(String(data.slug))} />
+						<ImageCard
+							key={data.slug}
+							image={data}
+							onEdit={() => onEditImage(String(data.slug))}
+							selected={selectedImageSlugs.has(String(data.slug))}
+							onToggleSelected={() => onToggleSelectedImageSlug(String(data.slug))}
+						/>
 					)}
 					itemHeightEstimate={400}
 					columnWidth={500}
@@ -159,11 +174,28 @@ function MasonryScroller<Item>(props: MasonryScrollerProps<Item>) {
 type ImageCardProps = {
 	readonly image: ListImagesItem;
 	readonly onEdit: () => void;
+	readonly selected: boolean;
+	readonly onToggleSelected: () => void;
 };
 
-function ImageCard({ image, onEdit }: ImageCardProps) {
+function ImageCard({ image, onEdit, selected, onToggleSelected }: ImageCardProps) {
 	return (
 		<figure className="bg-card group relative overflow-hidden rounded-xl border @container">
+			<Button
+				variant={selected ? "default" : "secondary"}
+				size="icon-sm"
+				className={cn(
+					"absolute top-2 left-2 z-10 transition-opacity duration-200",
+					selected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+				)}
+				onClick={(event) => {
+					event.stopPropagation();
+					onToggleSelected();
+				}}
+			>
+				<IconCheck className={selected ? "opacity-100" : "opacity-30"} />
+				<span className="sr-only">Toggle image selection</span>
+			</Button>
 			<img
 				src={image.url}
 				alt={image.name}

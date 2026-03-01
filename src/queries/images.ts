@@ -10,6 +10,8 @@ import type { ImageCursor } from "@/server/db";
 
 import { listImagesPageFn, type ListImagesResponse } from "@/api/list-images";
 import {
+	bulkModifyImagesTagsFn,
+	type BulkModifyImagesTagsInput,
 	setImageUserTagsFn,
 	type SetImageUserTagsInput,
 	updateImageNameFn,
@@ -67,6 +69,15 @@ export const setImageUserTagsMutationOptions = (queryClient: QueryClient) => {
 	});
 };
 
+export const bulkModifyImagesTagsMutationOptions = (queryClient: QueryClient) => {
+	return mutationOptions({
+		mutationFn: (input: BulkModifyImagesTagsInput) => bulkModifyImagesTagsFn({ data: input }),
+		onSuccess: async () => {
+			await invalidateImageAndTagQueries(queryClient);
+		},
+	});
+};
+
 export const useUploadImageMutation = () => {
 	const queryClient = useQueryClient();
 	return useMutation(uploadImageMutationOptions(queryClient));
@@ -80,4 +91,9 @@ export const useUpdateImageNameMutation = () => {
 export const useSetImageUserTagsMutation = () => {
 	const queryClient = useQueryClient();
 	return useMutation(setImageUserTagsMutationOptions(queryClient));
+};
+
+export const useBulkModifyImagesTagsMutation = () => {
+	const queryClient = useQueryClient();
+	return useMutation(bulkModifyImagesTagsMutationOptions(queryClient));
 };

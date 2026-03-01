@@ -7,7 +7,12 @@ import { join } from "node:path";
 import { assertTagKindSlug, assertTagSlug } from "@/lib/data-model";
 
 import { DbSession } from "./client";
-import { reapplySystemTagsForAllImages, setImageTags, setImageUserTags } from "./image-tags";
+import {
+	bulkModifyImagesTags,
+	reapplySystemTagsForAllImages,
+	setImageTags,
+	setImageUserTags,
+} from "./image-tags";
 import { getImageBySlug, insertImage, listImagesPage, updateImageName } from "./images";
 import {
 	createTag,
@@ -657,6 +662,127 @@ describe("db/image-tags integration", () => {
 				setImageUserTags(session, {
 					imageSlug: "img-rejects",
 					tagSlugs: ["motive/missing"],
+				}),
+				"Tag not found: motive/missing",
+			);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"bulk modifies user tags across selected images and remains idempotent",
+		async () => {
+			const client = await createMigratedClient();
+
+			await ensureTag(client, "motive/nature", "Nature");
+			await ensureTag(client, "subject/portrait", "Portrait");
+			await ensureTag(client, "mood/calm", "Calm");
+
+			await using session = await createSession(client, "write");
+			await insertImage(session, {
+				slug: "img-bulk-1",
+				ext: "jpg",
+				name: "img-bulk-1",
+				addedAt: 2,
+				sizeBytes: 1024,
+				widthPx: 1920,
+				heightPx: 1080,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+			await insertImage(session, {
+				slug: "img-bulk-2",
+				ext: "jpg",
+				name: "img-bulk-2",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 1920,
+				heightPx: 1080,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+
+			await setImageTags(session, {
+				imageSlug: "img-bulk-1",
+				tagSlugs: ["motive/nature", "subject/portrait"],
+			});
+			await setImageTags(session, {
+				imageSlug: "img-bulk-2",
+				tagSlugs: ["subject/portrait"],
+			});
+
+			const first = await bulkModifyImagesTags(session, {
+				imageSlugs: ["img-bulk-1", "img-bulk-2", "img-bulk-2"],
+				tagSlugsToAdd: ["mood/calm", "subject/portrait"],
+				tagSlugsToRemove: ["motive/nature"],
+			});
+			expect(first.imageCount).toBe(2);
+			expect(first.insertedCount).toBe(2);
+			expect(first.removedCount).toBe(1);
+
+			const second = await bulkModifyImagesTags(session, {
+				imageSlugs: ["img-bulk-1", "img-bulk-2"],
+				tagSlugsToAdd: ["mood/calm", "subject/portrait"],
+				tagSlugsToRemove: ["motive/nature"],
+			});
+			expect(second.insertedCount).toBe(0);
+			expect(second.removedCount).toBe(0);
+
+			await session.commit();
+
+			const rowsResult = await client.execute({
+				sql: "SELECT image_slug, tag_slug FROM image_tags ORDER BY image_slug ASC, tag_slug ASC",
+			});
+			const rows = rowsResult.rows.map((row) => ({
+				image_slug: getString(row, "image_slug"),
+				tag_slug: getString(row, "tag_slug"),
+			}));
+
+			expect(rows).toEqual([
+				{ image_slug: "img-bulk-1", tag_slug: "mood/calm" },
+				{ image_slug: "img-bulk-1", tag_slug: "subject/portrait" },
+				{ image_slug: "img-bulk-2", tag_slug: "mood/calm" },
+				{ image_slug: "img-bulk-2", tag_slug: "subject/portrait" },
+			]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
+	it(
+		"bulk modify rejects system and missing tags",
+		async () => {
+			const client = await createMigratedClient();
+
+			await ensureSystemTag(client, "resolution/4k", "4K");
+			await ensureTag(client, "motive/nature", "Nature");
+
+			await using session = await createSession(client, "write");
+			await insertImage(session, {
+				slug: "img-bulk-rejects",
+				ext: "jpg",
+				name: "img-bulk-rejects",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 1200,
+				heightPx: 800,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+
+			await expectRejectsWithMessage(
+				bulkModifyImagesTags(session, {
+					imageSlugs: ["img-bulk-rejects"],
+					tagSlugsToAdd: ["resolution/4k"],
+					tagSlugsToRemove: [],
+				}),
+				"System tag cannot be assigned manually: resolution/4k",
+			);
+
+			await expectRejectsWithMessage(
+				bulkModifyImagesTags(session, {
+					imageSlugs: ["img-bulk-rejects"],
+					tagSlugsToAdd: ["motive/missing"],
+					tagSlugsToRemove: [],
 				}),
 				"Tag not found: motive/missing",
 			);

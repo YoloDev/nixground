@@ -3,7 +3,7 @@ import { type } from "arktype";
 
 import { assertImageName, assertTagSlug } from "@/lib/data-model";
 import { assertValidImageSlug } from "@/lib/image-keys";
-import { setImageUserTags, startSession, updateImageName } from "@/server/db";
+import { bulkModifyImagesTags, setImageUserTags, startSession, updateImageName } from "@/server/db";
 
 export type UpdateImageNameInput = {
 	readonly imageSlug: ReturnType<typeof assertValidImageSlug>;
@@ -15,6 +15,12 @@ export type SetImageUserTagsInput = {
 	readonly tagSlugs: readonly ReturnType<typeof assertTagSlug>[];
 };
 
+export type BulkModifyImagesTagsInput = {
+	readonly imageSlugs: readonly ReturnType<typeof assertValidImageSlug>[];
+	readonly tagSlugsToAdd: readonly ReturnType<typeof assertTagSlug>[];
+	readonly tagSlugsToRemove: readonly ReturnType<typeof assertTagSlug>[];
+};
+
 const UpdateImageNameShape = type({
 	imageSlug: "string",
 	name: "string",
@@ -23,6 +29,12 @@ const UpdateImageNameShape = type({
 const SetImageUserTagsShape = type({
 	imageSlug: "string",
 	tagSlugs: "string[]",
+});
+
+const BulkModifyImagesTagsShape = type({
+	imageSlugs: "string[]",
+	tagSlugsToAdd: "string[]",
+	tagSlugsToRemove: "string[]",
 });
 
 function parseOrThrow<T>(value: T | InstanceType<typeof type.errors>) {
@@ -51,6 +63,16 @@ export function parseSetImageUserTagsInput(input: unknown): SetImageUserTagsInpu
 	};
 }
 
+export function parseBulkModifyImagesTagsInput(input: unknown): BulkModifyImagesTagsInput {
+	const parsed = parseOrThrow(BulkModifyImagesTagsShape(input));
+
+	return {
+		imageSlugs: parsed.imageSlugs.map((imageSlug) => assertValidImageSlug(imageSlug)),
+		tagSlugsToAdd: parsed.tagSlugsToAdd.map((tagSlug) => assertTagSlug(tagSlug)),
+		tagSlugsToRemove: parsed.tagSlugsToRemove.map((tagSlug) => assertTagSlug(tagSlug)),
+	};
+}
+
 export const updateImageNameFn = createServerFn({ method: "POST" })
 	.inputValidator((input: unknown) => parseUpdateImageNameInput(input))
 	.handler(async ({ data }) => {
@@ -70,6 +92,19 @@ export const setImageUserTagsFn = createServerFn({ method: "POST" })
 		const updated = await setImageUserTags(session, {
 			imageSlug: data.imageSlug,
 			tagSlugs: data.tagSlugs,
+		});
+		await session.commit();
+		return updated;
+	});
+
+export const bulkModifyImagesTagsFn = createServerFn({ method: "POST" })
+	.inputValidator((input: unknown) => parseBulkModifyImagesTagsInput(input))
+	.handler(async ({ data }) => {
+		await using session = await startSession("write");
+		const updated = await bulkModifyImagesTags(session, {
+			imageSlugs: data.imageSlugs,
+			tagSlugsToAdd: data.tagSlugsToAdd,
+			tagSlugsToRemove: data.tagSlugsToRemove,
 		});
 		await session.commit();
 		return updated;

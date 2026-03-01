@@ -18,6 +18,56 @@ type ReapplySystemTagsResult = {
 	readonly imageCount: number;
 };
 
+type BulkModifyImagesTagsInput = {
+	readonly imageSlugs: readonly string[];
+	readonly tagSlugsToAdd: readonly string[];
+	readonly tagSlugsToRemove: readonly string[];
+};
+
+type BulkModifyImagesTagsResult = {
+	readonly imageCount: number;
+	readonly addTagCount: number;
+	readonly removeTagCount: number;
+	readonly insertedCount: number;
+	readonly removedCount: number;
+};
+
+async function assertManualTagSlugsExistAndNotSystem(
+	session: DbExecutor,
+	tagSlugs: readonly ReturnType<typeof assertTagSlug>[],
+) {
+	if (tagSlugs.length === 0) {
+		return;
+	}
+
+	const placeholders = tagSlugs.map(() => "?").join(", ");
+	const tagRows = await session.execute({
+		sql: `
+SELECT slug, system
+FROM tags
+WHERE slug IN (${placeholders})
+`,
+		args: [...tagSlugs],
+	});
+
+	const tagBySlug = new Map(
+		tagRows.rows.map((row) => {
+			const record = row as Record<string, unknown>;
+			return [assertTagSlug(String(record.slug)), Number(record.system)];
+		}),
+	);
+
+	for (const tagSlug of tagSlugs) {
+		const systemValue = tagBySlug.get(tagSlug);
+		if (typeof systemValue === "undefined") {
+			throw new Error(`Tag not found: ${tagSlug}`);
+		}
+		if (systemValue === 1) {
+			throw new Error(`System tag cannot be assigned manually: ${tagSlug}`);
+		}
+	}
+}
+
 export async function setImageTags(session: DbExecutor, input: SetImageTagsInput) {
 	const imageSlug = assertValidImageSlug(input.imageSlug);
 	const tagSlugs = [...new Set(input.tagSlugs.map(assertTagSlug))];
@@ -48,34 +98,7 @@ export async function setImageUserTags(session: DbExecutor, input: SetImageUserT
 		throw new Error(`Image not found: ${imageSlug}`);
 	}
 
-	if (requestedTagSlugs.length > 0) {
-		const placeholders = requestedTagSlugs.map(() => "?").join(", ");
-		const tagRows = await session.execute({
-			sql: `
-SELECT slug, system
-FROM tags
-WHERE slug IN (${placeholders})
-`,
-			args: requestedTagSlugs,
-		});
-
-		const tagBySlug = new Map(
-			tagRows.rows.map((row) => {
-				const record = row as Record<string, unknown>;
-				return [assertTagSlug(String(record.slug)), Number(record.system)];
-			}),
-		);
-
-		for (const tagSlug of requestedTagSlugs) {
-			const systemValue = tagBySlug.get(tagSlug);
-			if (typeof systemValue === "undefined") {
-				throw new Error(`Tag not found: ${tagSlug}`);
-			}
-			if (systemValue === 1) {
-				throw new Error(`System tag cannot be assigned manually: ${tagSlug}`);
-			}
-		}
-	}
+	await assertManualTagSlugsExistAndNotSystem(session, requestedTagSlugs);
 
 	await session.execute({
 		sql: `
@@ -100,6 +123,90 @@ AND tag_slug IN (
 	return {
 		imageSlug,
 		tagCount: requestedTagSlugs.length,
+	};
+}
+
+export async function bulkModifyImagesTags(
+	session: DbExecutor,
+	input: BulkModifyImagesTagsInput,
+): Promise<BulkModifyImagesTagsResult> {
+	const imageSlugs = [...new Set(input.imageSlugs.map(assertValidImageSlug))];
+	const tagSlugsToAdd = [...new Set(input.tagSlugsToAdd.map(assertTagSlug))];
+	const tagSlugsToRemove = [...new Set(input.tagSlugsToRemove.map(assertTagSlug))];
+
+	await assertManualTagSlugsExistAndNotSystem(session, [...tagSlugsToAdd, ...tagSlugsToRemove]);
+
+	if (imageSlugs.length === 0) {
+		return {
+			imageCount: 0,
+			addTagCount: tagSlugsToAdd.length,
+			removeTagCount: tagSlugsToRemove.length,
+			insertedCount: 0,
+			removedCount: 0,
+		};
+	}
+
+	const imageSlugPlaceholders = imageSlugs.map(() => "?").join(", ");
+	const existingImageRows = await session.execute({
+		sql: `
+SELECT slug
+FROM images
+WHERE slug IN (${imageSlugPlaceholders})
+`,
+		args: imageSlugs,
+	});
+	const existingImageSlugs = existingImageRows.rows.map((row) =>
+		assertValidImageSlug(String((row as Record<string, unknown>).slug)),
+	);
+
+	if (existingImageSlugs.length === 0) {
+		return {
+			imageCount: 0,
+			addTagCount: tagSlugsToAdd.length,
+			removeTagCount: tagSlugsToRemove.length,
+			insertedCount: 0,
+			removedCount: 0,
+		};
+	}
+
+	const existingImageSlugPlaceholders = existingImageSlugs.map(() => "?").join(", ");
+	let insertedCount = 0;
+	let removedCount = 0;
+
+	if (tagSlugsToAdd.length > 0) {
+		const addTagSlugPlaceholders = tagSlugsToAdd.map(() => "?").join(", ");
+		const insertResult = await session.execute({
+			sql: `
+INSERT OR IGNORE INTO image_tags (image_slug, tag_slug)
+SELECT i.slug, t.slug
+FROM images i
+JOIN tags t ON t.slug IN (${addTagSlugPlaceholders})
+WHERE i.slug IN (${existingImageSlugPlaceholders})
+`,
+			args: [...tagSlugsToAdd, ...existingImageSlugs],
+		});
+		insertedCount = insertResult.rowsAffected;
+	}
+
+	if (tagSlugsToRemove.length > 0) {
+		const removeTagSlugPlaceholders = tagSlugsToRemove.map(() => "?").join(", ");
+		const deleteResult = await session.execute({
+			sql: `
+DELETE FROM image_tags
+WHERE image_slug IN (${existingImageSlugPlaceholders})
+AND tag_slug IN (${removeTagSlugPlaceholders})
+`,
+			args: [...existingImageSlugs, ...tagSlugsToRemove],
+		});
+		removedCount = deleteResult.rowsAffected;
+	}
+
+	return {
+		imageCount: existingImageSlugs.length,
+		addTagCount: tagSlugsToAdd.length,
+		removeTagCount: tagSlugsToRemove.length,
+		insertedCount,
+		removedCount,
 	};
 }
 

@@ -18,7 +18,12 @@ export {
 	upsertTag,
 	upsertTagKind,
 } from "./tags";
-export { reapplySystemTagsForAllImages, setImageTags, setImageUserTags } from "./image-tags";
+export {
+	bulkModifyImagesTags,
+	reapplySystemTagsForAllImages,
+	setImageTags,
+	setImageUserTags,
+} from "./image-tags";
 export type {
 	ImageCursor,
 	ImageListRecord,
