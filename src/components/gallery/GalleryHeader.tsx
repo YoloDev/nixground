@@ -16,14 +16,22 @@ export function GalleryHeader({
 	onBulkEdit,
 	onClearSelection,
 }: GalleryHeaderProps) {
+	const hasSelectedImages = selectedImages > 0;
+
 	return (
 		<Header sidebar>
 			<HeaderActions>
-				<GalleryHeaderSelectionActions
-					selectedImages={selectedImages}
-					onBulkEdit={onBulkEdit}
-					onClearSelection={onClearSelection}
-				/>
+				{hasSelectedImages ? (
+					<GalleryHeaderSelectionActions
+						selectedImages={selectedImages}
+						onBulkEdit={onBulkEdit}
+						onClearSelection={onClearSelection}
+					/>
+				) : (
+					<Link to="/export" className={buttonVariants({ variant: "outline", size: "sm" })}>
+						Export
+					</Link>
+				)}
 				<Link
 					from="/"
 					to="/"

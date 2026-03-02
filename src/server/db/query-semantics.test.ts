@@ -13,7 +13,13 @@ import {
 	setImageTags,
 	setImageUserTags,
 } from "./image-tags";
-import { getImageBySlug, insertImage, listImagesPage, updateImageName } from "./images";
+import {
+	getImageBySlug,
+	insertImage,
+	listImagesForExport,
+	listImagesPage,
+	updateImageName,
+} from "./images";
 import {
 	createTag,
 	createTagKind,
@@ -115,6 +121,69 @@ async function expectRejectsWithMessage(promise: Promise<unknown>, expectedMessa
 }
 
 describe("db/images integration", () => {
+	it(
+		"lists ready images for export ordered by slug with tags",
+		async () => {
+			const client = await createMigratedClient();
+
+			await ensureTag(client, "motive/nature", "Nature");
+
+			await using session = await createSession(client, "write");
+			await insertImage(session, {
+				slug: "zeta",
+				ext: "jpg",
+				name: "zeta",
+				addedAt: 3,
+				sizeBytes: 3072,
+				widthPx: 3840,
+				heightPx: 2160,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+			await insertImage(session, {
+				slug: "alpha",
+				ext: "jpg",
+				name: "alpha",
+				addedAt: 1,
+				sizeBytes: 1024,
+				widthPx: 1920,
+				heightPx: 1080,
+				sha256: TEST_SHA256,
+				ready: true,
+			});
+			await insertImage(session, {
+				slug: "middle",
+				ext: "jpg",
+				name: "middle",
+				addedAt: 2,
+				sizeBytes: 2048,
+				widthPx: 2560,
+				heightPx: 1440,
+				sha256: TEST_SHA256,
+				ready: false,
+			});
+
+			await setImageTags(session, {
+				imageSlug: "alpha",
+				tagSlugs: ["motive/nature"],
+			});
+			await session.commit();
+
+			await using readSession = await createSession(client, "read");
+			const items = await listImagesForExport(readSession);
+
+			expect(items.map((item) => String(item.slug))).toEqual(["alpha", "zeta"]);
+			expect(items.map((item) => item.ready)).toEqual([true, true]);
+			expect(items[0]?.sizeBytes).toBe(1024);
+			expect(items[0]?.widthPx).toBe(1920);
+			expect(items[0]?.heightPx).toBe(1080);
+			expect(String(items[0]?.sha256)).toBe(TEST_SHA256);
+			expect(items[0]?.tags.map((tag) => String(tag.slug))).toEqual(["motive/nature"]);
+			expect(items[1]?.tags).toEqual([]);
+		},
+		INTEGRATION_TIMEOUT_MS,
+	);
+
 	it(
 		"includes single sorted tag list per listed image",
 		async () => {

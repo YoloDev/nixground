@@ -109,6 +109,48 @@ JOIN (
 	};
 }
 
+async function listImageTagsByImageSlug(
+	session: DbExecutor,
+	imageSlugs: readonly string[],
+): Promise<Map<string, ImageListRecord["tags"]>> {
+	const tagsByImageSlug = new Map<string, ImageListRecord["tags"]>();
+
+	if (imageSlugs.length < 1) {
+		return tagsByImageSlug;
+	}
+
+	const placeholders = imageSlugs.map(() => "?").join(", ");
+	const tagsResult = await session.execute({
+		sql: `
+SELECT
+	it.image_slug,
+	t.slug AS tag_slug,
+	t.name AS tag_name,
+	t.kind_slug,
+	t.system
+FROM image_tags it
+INNER JOIN tags t ON t.slug = it.tag_slug
+WHERE it.image_slug IN (${placeholders})
+ORDER BY it.image_slug ASC, t.kind_slug ASC, t.slug ASC
+`,
+		args: [...imageSlugs],
+	});
+
+	for (const row of tagsResult.rows) {
+		const imageSlugRaw = row.image_slug;
+		if (typeof imageSlugRaw !== "string") {
+			throw new Error("Expected string row field: image_slug");
+		}
+
+		const imageSlug = assertValidImageSlug(imageSlugRaw);
+		const tags = tagsByImageSlug.get(imageSlug) ?? [];
+		tags.push(mapImageListTagRow(row));
+		tagsByImageSlug.set(imageSlug, tags);
+	}
+
+	return tagsByImageSlug;
+}
+
 export async function listImagesPage(session: DbExecutor, input: ListImagesPageInput) {
 	const limit = assertPageLimit(input.limit);
 	const groupedTags = input.groupedTagSlugs ? parseGroupedTagSlugs(input.groupedTagSlugs) : [];
@@ -156,38 +198,7 @@ LIMIT ?
 		.map((row: Record<string, unknown>) => mapImageRow(row));
 	const imageSlugs = images.map((image) => image.slug);
 
-	const tagsByImageSlug = new Map<string, ImageListRecord["tags"]>();
-
-	if (imageSlugs.length > 0) {
-		const placeholders = imageSlugs.map(() => "?").join(", ");
-		const tagsResult = await session.execute({
-			sql: `
-SELECT
-	it.image_slug,
-	t.slug AS tag_slug,
-	t.name AS tag_name,
-	t.kind_slug,
-	t.system
-FROM image_tags it
-INNER JOIN tags t ON t.slug = it.tag_slug
-WHERE it.image_slug IN (${placeholders})
-ORDER BY it.image_slug ASC, t.kind_slug ASC, t.slug ASC
-`,
-			args: imageSlugs,
-		});
-
-		for (const row of tagsResult.rows) {
-			const imageSlugRaw = row.image_slug;
-			if (typeof imageSlugRaw !== "string") {
-				throw new Error("Expected string row field: image_slug");
-			}
-
-			const imageSlug = assertValidImageSlug(imageSlugRaw);
-			const tags = tagsByImageSlug.get(imageSlug) ?? [];
-			tags.push(mapImageListTagRow(row));
-			tagsByImageSlug.set(imageSlug, tags);
-		}
-	}
+	const tagsByImageSlug = await listImageTagsByImageSlug(session, imageSlugs);
 
 	const items: ImageListRecord[] = images.map((image) => ({
 		...image,
@@ -200,6 +211,35 @@ ORDER BY it.image_slug ASC, t.kind_slug ASC, t.slug ASC
 		items,
 		nextCursor: hasNextPage && last ? { addedAt: last.addedAt, slug: last.slug } : null,
 	};
+}
+
+export async function listImagesForExport(session: DbExecutor): Promise<ImageListRecord[]> {
+	const result = await session.execute({
+		sql: `
+SELECT
+	i.slug,
+	i.ext,
+	i.name,
+	i.added_at,
+	i.size_bytes,
+	i.width_px,
+	i.height_px,
+	i.sha256,
+	i.ready
+FROM images i
+WHERE i.ready = 1
+ORDER BY i.slug ASC
+`,
+	});
+
+	const images = result.rows.map((row: Record<string, unknown>) => mapImageRow(row));
+	const imageSlugs = images.map((image) => image.slug);
+	const tagsByImageSlug = await listImageTagsByImageSlug(session, imageSlugs);
+
+	return images.map((image) => ({
+		...image,
+		tags: tagsByImageSlug.get(image.slug) ?? [],
+	}));
 }
 
 export async function getImageBySlug(

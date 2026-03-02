@@ -1,6 +1,7 @@
 import {
 	infiniteQueryOptions,
 	mutationOptions,
+	queryOptions,
 	QueryClient,
 	useMutation,
 	useQueryClient,
@@ -8,6 +9,7 @@ import {
 
 import type { ImageCursor } from "@/server/db";
 
+import { exportImagesFn, type ExportImagesResponse } from "@/api/export-images";
 import { listImagesPageFn, type ListImagesResponse } from "@/api/list-images";
 import {
 	bulkModifyImagesTagsFn,
@@ -20,6 +22,13 @@ import {
 import { uploadImageFn } from "@/api/upload-image";
 
 const initialPageParam: ImageCursor | undefined = undefined;
+
+export const exportImagesQueryOptions = () => {
+	return queryOptions({
+		queryKey: ["images", "export"],
+		queryFn: (): Promise<ExportImagesResponse> => exportImagesFn(),
+	});
+};
 
 export const listImagesQueryOptions = (tags: Readonly<Record<string, readonly string[]>>) => {
 	return infiniteQueryOptions({

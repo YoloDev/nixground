@@ -4,6 +4,7 @@ export {
 	deleteImageBySlug,
 	getImageBySlug,
 	insertImage,
+	listImagesForExport,
 	listImagesPage,
 	markImageReady,
 	updateImageName,
